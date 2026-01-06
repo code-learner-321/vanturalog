@@ -6,6 +6,13 @@
 }
 
 @theme inline {
+  /* Link your Next.js font variables to Tailwind names */
+  --font-heading: var(--font-quicksand);
+  --font-body: var(--font-heebo);
+
+  --color-primary-white: #FFFFFF;
+  --color-secondary: #F5F5F5;
+  --color-accent-100: #FFA500;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
