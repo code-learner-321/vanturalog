@@ -130,7 +130,7 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
             }
         }
     `;
-    
+    console.log("safe id: "+safeUserId)
     const { data: viewerData } = useQuery(GET_VIEWER_ID, {
         skip: !!safeUserId, // Skip if we already have an ID
         fetchPolicy: 'network-only'
