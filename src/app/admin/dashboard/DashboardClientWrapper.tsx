@@ -130,22 +130,23 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
             }
         }
     `;
-    console.log("safe id: "+safeUserId)
+    console.log("safe id: " + safeUserId)
     const { data: viewerData } = useQuery(GET_VIEWER_ID, {
         skip: !!safeUserId, // Skip if we already have an ID
         fetchPolicy: 'network-only'
     });
-    
+
     // Use viewer data if available and we don't have an ID
     const finalUserId = safeUserId || viewerData?.viewer?.databaseId?.toString() || viewerData?.viewer?.id?.toString() || "";
 
     const { data, loading, error, refetch } = useQuery(GET_USER_SETTINGS, { 
-        variables: { id: finalUserId },
-        fetchPolicy: 'network-only',
-        // IMPORTANT: Skip if ID is missing to prevent 500 Internal Server Error
-        skip: !finalUserId || finalUserId === "" 
-    });
-    
+    variables: { id: finalUserId },
+    // This tells Apollo to always check the server, even if it has the data
+    fetchPolicy: 'network-only', 
+    nextFetchPolicy: 'network-only',
+    skip: !finalUserId
+});
+
     const [updateProfile] = useMutation(UPDATE_USER_PROFILE);
     const [displayName, setDisplayName] = useState('');
     const [previewUrl, setPreviewUrl] = useState('');
@@ -169,42 +170,59 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
     };
 
     const handleSaveProfile = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!finalUserId) return;
+    e.preventDefault();
+    if (!finalUserId || status === 'loading') return;
 
-        setStatus('loading');
-        try {
-            let uploadedMediaId = null;
+    setStatus('loading');
+    try {
+        let uploadedMediaId = null;
 
-            if (selectedFile) {
-                const formData = new FormData();
-                formData.append('file', selectedFile);
+        // 1. Handle Image Upload
+        if (selectedFile) {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
 
-                const uploadRes = await fetch("https://vanturalog.najubudeen.info/wp-json/wp/v2/media", {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'Authorization': `Bearer ${jwtToken}` }
-                });
-                const mediaData = await uploadRes.json();
-                uploadedMediaId = mediaData.id;
-            }
-
-            await updateProfile({
-                variables: {
-                    userId: parseInt(finalUserId),
-                    displayName: displayName,
-                    mediaId: uploadedMediaId
-                }
+            const uploadRes = await fetch("https://vanturalog.najubudeen.info/wp-json/wp/v2/media", {
+                method: 'POST',
+                body: formData,
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
             });
 
-            setStatus('success');
-            await refetch();
-            setTimeout(() => setStatus('idle'), 3000);
-        } catch (err) {
-            console.error("Mutation error:", err);
-            setStatus('error');
+            if (!uploadRes.ok) throw new Error("Upload failed");
+
+            const mediaData = await uploadRes.json();
+            uploadedMediaId = mediaData.id;
         }
-    };
+
+        // 2. Run the Mutation
+        await updateProfile({
+            variables: {
+                userId: parseInt(finalUserId),
+                displayName: displayName,
+                mediaId: uploadedMediaId
+            }
+        });
+
+        // 3. INTERNAL REFRESH (The "Magic" Part)
+        // This clears the Apollo cache and re-runs all queries on this page
+        // without a browser reload.
+        setStatus('success');
+        setSelectedFile(null); 
+        
+        // This forces the query to go back to the network and bypass the cache
+        await refetch(); 
+        
+        // Clear the file input reference manually if you have one
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
+        // Reset status after a delay
+        setTimeout(() => setStatus('idle'), 3000);
+
+    } catch (err) {
+        console.error("Update Error:", err);
+        setStatus('error');
+    }
+};
 
     // UI for missing ID
     if (!finalUserId) return (
@@ -216,7 +234,7 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
                 <p className="font-black text-red-600 uppercase text-[10px] tracking-widest">Account ID Missing</p>
                 <p className="text-xs text-red-500 mt-1">We couldn't verify your WordPress ID. Please log out and back in.</p>
             </div>
-            <button onClick={() => window.location.href='/login'} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 px-4 py-2 rounded-lg">Return to Login</button>
+            <button onClick={() => window.location.href = '/login'} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 px-4 py-2 rounded-lg">Return to Login</button>
         </div>
     );
 
