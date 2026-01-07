@@ -25,6 +25,7 @@ async function getVerifiedUser(token: string) {
                             name
                             nickname
                             email
+                            avatarUrl
                             roles {
                                 nodes {
                                     name
@@ -158,6 +159,7 @@ export default async function AdminDashboardPage() {
         role: viewer.roles?.nodes[0]?.name.toLowerCase() || userRole.toLowerCase() || 'subscriber',
         initial: (viewer.name || viewer.nickname || userName || "U").charAt(0).toUpperCase(),
         email: viewer.email || "",
+        avatarUrl: viewer.avatarUrl || "",
     };
 
     // Get the auth token for the client component

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
+import { json } from 'stream/consumers';
 
 const GET_LOGO_DATA = gql`
   query GetLogoData {
@@ -116,51 +117,49 @@ function LogoSettingsManager() {
 
 // --- USER SETTINGS MANAGER ---
 function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
-    // FIX: Look for ID in multiple locations and ensure it isn't "null" or "undefined"
-    // Try databaseId first (WordPress), then id (GraphQL), then sub (JWT)
-    const rawId = userData?.databaseId || userData?.id || userData?.sub;
+    // 1. Identify User ID
+    const rawId = userData?.databaseId || userData?.userId || userData?.id || userData?.sub;
+    const safeUserId = (rawId && rawId !== "undefined") ? parseInt(rawId.toString(), 10) : null;
 
-    const safeUserId = (rawId && rawId !== "undefined" && rawId !== "null" && rawId !== null && rawId !== undefined) ? rawId.toString() : "";
-    // If we still don't have an ID, try to get it from the viewer query
-    const GET_VIEWER_ID = gql`
-        query GetViewerId {
-            viewer {
-                databaseId
-                id
-            }
-        }
-    `;
-    console.log("safe id: " + safeUserId)
-    const { data: viewerData } = useQuery(GET_VIEWER_ID, {
-        skip: !!safeUserId, // Skip if we already have an ID
-        fetchPolicy: 'network-only'
+    // 2. Query WordPress
+    const { data, loading, refetch } = useQuery(GET_USER_SETTINGS, {
+        variables: { id: safeUserId?.toString() },
+        fetchPolicy: 'cache-and-network',
+        skip: !safeUserId
     });
 
-    // Use viewer data if available and we don't have an ID
-    const finalUserId = safeUserId || viewerData?.viewer?.databaseId?.toString() || viewerData?.viewer?.id?.toString() || "";
-
-    const { data, loading, error, refetch } = useQuery(GET_USER_SETTINGS, { 
-    variables: { id: finalUserId },
-    // This tells Apollo to always check the server, even if it has the data
-    fetchPolicy: 'network-only', 
-    nextFetchPolicy: 'network-only',
-    skip: !finalUserId
-});
-
     const [updateProfile] = useMutation(UPDATE_USER_PROFILE);
-    const [displayName, setDisplayName] = useState('');
+
+    // States
+    const [displayName, setDisplayName] = useState(userData?.name || '');
     const [previewUrl, setPreviewUrl] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [status, setStatus] = useState('idle');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        if (data?.user) {
-            setDisplayName(data.user.name || '');
-            setPreviewUrl(data.user.avatarUrl || '');
-        }
-    }, [data]);
+    // 3. EFFECTIVE SYNC: Catch the Avatar from WordPress
+useEffect(() => {
+    if (data?.user) {
+        setDisplayName(data.user.name || '');
+        
+        const wpAvatar = data.user.avatarUrl;
+        const initialAvatar = userData?.avatarUrl;
+        
+        // DEBUG: Check your browser console (F12) to see this table!
+        console.table({
+            "WP_GraphQL_Avatar": wpAvatar,
+            "Initial_Session_Avatar": initialAvatar
+        });
 
+        // FORCE: Use whatever URL we can find
+        const finalUrl = wpAvatar || initialAvatar;
+        
+        if (finalUrl && finalUrl.startsWith('http')) {
+            setPreviewUrl(finalUrl);
+        }
+    }
+}, [data, userData]);
+    // 4. IMAGE CHANGE HANDLER
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -169,102 +168,157 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
         }
     };
 
+    const router = useRouter();
+    // 5. THE MISSING SAVE HANDLER
     const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!finalUserId || status === 'loading') return;
+    if (!safeUserId) return;
 
     setStatus('loading');
     try {
         let uploadedMediaId = null;
 
-        // 1. Handle Image Upload
         if (selectedFile) {
             const formData = new FormData();
             formData.append('file', selectedFile);
-
             const uploadRes = await fetch("https://vanturalog.najubudeen.info/wp-json/wp/v2/media", {
                 method: 'POST',
                 body: formData,
                 headers: { 'Authorization': `Bearer ${jwtToken}` }
             });
-
-            if (!uploadRes.ok) throw new Error("Upload failed");
-
             const mediaData = await uploadRes.json();
-            uploadedMediaId = mediaData.id;
+            if (mediaData.id) uploadedMediaId = parseInt(mediaData.id.toString(), 10);
         }
 
-        // 2. Run the Mutation
         await updateProfile({
             variables: {
-                userId: parseInt(finalUserId),
+                userId: safeUserId,
                 displayName: displayName,
                 mediaId: uploadedMediaId
             }
         });
 
-        // 3. INTERNAL REFRESH (The "Magic" Part)
-        // This clears the Apollo cache and re-runs all queries on this page
-        // without a browser reload.
+        // --- THE FIX ---
         setStatus('success');
-        setSelectedFile(null); 
+        setSelectedFile(null);
         
-        // This forces the query to go back to the network and bypass the cache
-        await refetch(); 
+        // 1. Refresh Apollo's local cache for this component
+        const { data: updatedData } = await refetch();
         
-        // Clear the file input reference manually if you have one
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        if (updatedData?.user?.avatarUrl) {
+            setPreviewUrl(updatedData.user.avatarUrl);
+        }
+        // 2. Tell Next.js to refresh the server data (updates Sidebar/Header)
+        router.refresh(); 
 
-        // Reset status after a delay
         setTimeout(() => setStatus('idle'), 3000);
-
     } catch (err) {
-        console.error("Update Error:", err);
+        console.error("Save Error:", err);
         setStatus('error');
     }
 };
-
-    // UI for missing ID
-    if (!finalUserId) return (
-        <div className="p-8 border-2 border-dashed border-red-100 bg-red-50 rounded-3xl text-center space-y-4">
-            <div className="size-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
-                <span className="material-symbols-outlined">person_off</span>
-            </div>
-            <div>
-                <p className="font-black text-red-600 uppercase text-[10px] tracking-widest">Account ID Missing</p>
-                <p className="text-xs text-red-500 mt-1">We couldn't verify your WordPress ID. Please log out and back in.</p>
-            </div>
-            <button onClick={() => window.location.href = '/login'} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 px-4 py-2 rounded-lg">Return to Login</button>
-        </div>
-    );
-
-    if (loading) return <div className="p-8 text-orange-600 animate-pulse font-bold text-center text-sm uppercase tracking-widest">Fetching Profile...</div>;
+    if (!safeUserId) return <div className="p-4 text-orange-600">Session error: ID not found.</div>;
 
     return (
-        <form onSubmit={handleSaveProfile} className="space-y-8 animate-fade-in">
-            <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="relative group">
-                    <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-orange-500 shadow-xl bg-gray-100">
-                        <img src={previewUrl || '/default-avatar.png'} className="w-full h-full object-cover" alt="Avatar" />
+        <form onSubmit={handleSaveProfile} className="space-y-8 animate-fade-in pb-10">
+    {/* AVATAR SECTION */}
+    <div className="flex flex-col items-center justify-center">
+        <div className="relative group">
+            {/* Main Avatar Container */}
+            <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-tr from-orange-100 to-orange-50 flex items-center justify-center cursor-pointer relative transition-transform hover:scale-105 active:scale-95"
+            >
+                {/* Logic: Show 'previewUrl' if user just picked a file, 
+                   otherwise show the 'userData.avatarUrl' from the server 
+                */}
+                {(previewUrl || userData?.avatarUrl) ? (
+                    <img
+                        src={previewUrl || userData?.avatarUrl}
+                        className="w-full h-full object-cover"
+                        alt="Profile"
+                        key={previewUrl || userData?.avatarUrl}
+                    />
+                ) : (
+                    <div className="size-full flex items-center justify-center text-orange-600 font-black text-4xl">
+                        {displayName?.charAt(0) || "U"}
                     </div>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="material-symbols-outlined text-white text-3xl">photo_camera</span>
-                    </button>
+                )}
+
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="material-symbols-outlined text-white text-3xl mb-1">photo_camera</span>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">Change Photo</span>
                 </div>
-                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Profile Photo</span>
             </div>
 
-            <div className="p-4 border rounded-xl bg-white shadow-sm focus-within:ring-2 focus-within:ring-orange-500 transition-all">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase">Display Name</label>
-                <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full mt-1 text-lg font-bold outline-none bg-transparent text-gray-800" required />
-            </div>
+            {/* Status Indicator (Small dot at the bottom right of the avatar) */}
+            <div className="absolute bottom-1 right-2 w-7 h-7 bg-green-500 border-4 border-white rounded-full shadow-md"></div>
+        </div>
 
-            <button type="submit" disabled={status === 'loading'} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-orange-700 active:scale-95 transition-all disabled:bg-gray-400">
-                {status === 'loading' ? 'Saving...' : status === 'success' ? '✅ Updated!' : 'Update Profile Settings'}
-            </button>
-            {(status === 'error' || error) && <p className="text-center text-red-500 text-xs font-bold">Update failed. Refresh and try again.</p>}
-        </form>
+        <div className="mt-4 text-center">
+            <h3 className="text-lg font-black text-gray-800 leading-none">{displayName || 'User'}</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Profile Picture</p>
+        </div>
+
+        <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+    </div>
+
+    {/* INPUT SECTION */}
+    <div className="space-y-4">
+        <div className="group p-4 border-2 border-gray-100 rounded-2xl bg-white shadow-sm focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-50 transition-all">
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 group-focus-within:text-orange-500 transition-colors">
+                Public Display Name
+            </label>
+            <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-gray-400 group-focus-within:text-orange-500">badge</span>
+                <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full text-lg font-bold outline-none bg-transparent text-gray-800 placeholder:text-gray-300"
+                    placeholder="Enter your name..."
+                    required
+                />
+            </div>
+        </div>
+    </div>
+
+    {/* SUBMIT SECTION */}
+    <div className="pt-2">
+        <button
+            type="submit"
+            disabled={status === 'loading'}
+            className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2
+                ${status === 'loading' 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : status === 'success'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-orange-600 text-white hover:bg-orange-700 hover:shadow-orange-200'
+                }`}
+        >
+            {status === 'loading' ? (
+                <>
+                    <span className="animate-spin size-4 border-2 border-white/30 border-t-white rounded-full" />
+                    Updating Profile...
+                </>
+            ) : status === 'success' ? (
+                <>
+                    <span className="material-symbols-outlined">check_circle</span>
+                    Saved Successfully
+                </>
+            ) : (
+                'Save Profile Changes'
+            )}
+        </button>
+        
+        {status === 'error' && (
+            <p className="mt-3 text-center text-xs font-bold text-red-500 animate-bounce">
+                Update failed. Please try again.
+            </p>
+        )}
+    </div>
+</form>
     );
 }
 
@@ -286,7 +340,6 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
         });
         window.location.href = '/login?logout=success';
     };
-    console.log("userData:", userData);
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black">
