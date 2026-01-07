@@ -216,8 +216,43 @@ useEffect(() => {
         console.error("Save Error:", err);
         setStatus('error');
     }
+};  
+const handleHardLogout = () => {
+    // 1. Define the cookies you want to clear
+    const cookiesToClear = ['auth_token', 'user_name', 'user_role', 'userData'];
+
+    // 2. Loop through and kill each one
+    cookiesToClear.forEach(cookieName => {
+        // We set the path to / and the domain to localhost to ensure it matches
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    });
+
+    // 3. Clear storage
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 4. Force a hard redirect to login
+    window.location.href = "/login";
 };
-    if (!safeUserId) return <div className="p-4 text-orange-600">Session error: ID not found.</div>;
+
+    if (!safeUserId) {
+    return (
+        <div className="flex flex-col items-center justify-center p-10 bg-orange-50 rounded-3xl border-2 border-dashed border-orange-200 animate-fade-in">
+            <span className="material-symbols-outlined text-orange-500 text-6xl mb-4">history_toggle_off</span>
+            <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Session Expired</h2>
+            <p className="text-gray-500 text-center max-w-xs mt-2 text-sm leading-relaxed">
+                Your login session has ended or is invalid. Please log out and sign in again to edit your profile.
+            </p>
+            <button
+                onClick={handleHardLogout}
+                className="mt-6 px-8 py-3 bg-orange-600 text-white rounded-xl font-bold shadow-lg hover:bg-orange-700 active:scale-95 transition-all flex items-center gap-2"
+            >
+                <span className="material-symbols-outlined">logout</span>
+                Logout & Re-authenticate
+            </button>
+        </div>
+    );
+}
 
     return (
         <form onSubmit={handleSaveProfile} className="space-y-8 animate-fade-in pb-10">
