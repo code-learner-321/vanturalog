@@ -53,7 +53,7 @@ export default function Header() {
         // This detects when user is logged out automatically or cookies are cleared
         const cookieCheckInterval = setInterval(() => {
             checkUserCookie();
-        }, 5000);
+        }, 500);
 
         // Also listen for storage events (in case logout happens in another tab)
         const handleStorageChange = () => {

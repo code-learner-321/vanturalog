@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { token, name, role, email, action } = body;
+    const { token, name, role, email, avatarUrl, userId, action } = body;
     const cookieStore = await cookies();
 
     if (action === "logout") {
@@ -12,6 +12,8 @@ export async function POST(req) {
       cookieStore.delete("user_role");
       cookieStore.delete("user_name");
       cookieStore.delete("user_email");
+      cookieStore.delete("user_avatar");
+      cookieStore.delete("user_id");
       return NextResponse.json({ success: true });
     }
 
@@ -21,17 +23,25 @@ export async function POST(req) {
 
     const cookieOptions = {
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // Required for cross-site cookie sending to WordPress
-      path: "/",       // Cookie available across the entire site
-      maxAge: 60 * 60 * 24 * 365, // 1 year - persist until user manually logs out
+      sameSite: "lax" as const,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365, // 1 year persistence
     };
 
-    // Set the HttpOnly token (WordPress reads this)
+    // Set HttpOnly token for Server Actions/Verification
     cookieStore.set("auth_token", token, { ...cookieOptions, httpOnly: true });
 
-    // Set public data (Next.js UI reads this)
-    cookieStore.set("user_name", name, { ...cookieOptions, httpOnly: false });
-    cookieStore.set("user_role", role, { ...cookieOptions, httpOnly: false });
+    // Set Public metadata for UI and Fallback logic
+    cookieStore.set("user_name", name || "User", { ...cookieOptions, httpOnly: false });
+    cookieStore.set("user_role", role || "subscriber", { ...cookieOptions, httpOnly: false });
+    
+    // CRITICAL: These prevent the "immediate logout" on network jitter
+    if (avatarUrl) {
+      cookieStore.set("user_avatar", avatarUrl, { ...cookieOptions, httpOnly: false });
+    }
+    if (userId) {
+      cookieStore.set("user_id", userId.toString(), { ...cookieOptions, httpOnly: false });
+    }
     if (email) {
       cookieStore.set("user_email", email, { ...cookieOptions, httpOnly: false });
     }

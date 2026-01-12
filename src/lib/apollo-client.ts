@@ -5,22 +5,16 @@ const WP_URL = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
 
 const httpLink = createHttpLink({
   uri: WP_URL,
-  credentials: "include", 
 });
 
 const authLink = setContext((_, { headers }) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  
-  if (!token) {
-    return { headers };
-  }
-
+const your_token_variable = cookieStore.get('auth_token')?.value;
   return {
     headers: {
       ...headers,
-      authorization: `Bearer ${token}`,
+      authorization: `Bearer ${your_token_variable}`,
     }
-  };
+  }
 });
 
 export const client = new ApolloClient({
