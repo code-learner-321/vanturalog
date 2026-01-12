@@ -117,9 +117,9 @@ export default function Home() {
           <div className="flex flex-col w-full mt-4 mb-2">
             <div className="mb-8">
               <label className="flex flex-col gap-3 w-full max-w-[480px]">
-                <span className="text-sm font-bold text-slate-700 tracking-tight font-body pl-1">
+                <h3 className="font-heading text-xl capitalize font-bold text-slate-900 mb-3 leading-snug group-hover:text-accent-100 transition-colors">
                   Search your favourite tour spot
-                </span>
+                </h3>
                 <div className="flex w-full flex-1 items-stretch rounded-full h-14 shadow-sm bg-secondary border border-gray-200 focus-within:ring-2 focus-within:ring-primary focus-within:bg-white transition-all overflow-hidden">
                   <div className="text-slate-400 flex items-center justify-center pl-5">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -129,7 +129,7 @@ export default function Home() {
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex w-full min-w-0 flex-1 text-slate-900 focus:outline-0 bg-transparent placeholder:text-slate-400 px-4 text-base font-normal border-none focus:ring-0 font-body"
+                    className="flex w-full h-9 min-w-0 flex-1 text-slate-900 focus:outline-0 bg-transparent placeholder:text-slate-400 px-4 text-base font-normal border-none focus:ring-0 font-body"
                     placeholder="Search articles..."
                   />
                 </div>
