@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   // TO LOAD IMAGES FROM EXTERNAL DOMAINS THIS MUST BE ADDED...
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

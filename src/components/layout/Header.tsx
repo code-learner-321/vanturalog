@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import { useRouter } from "next/navigation";
 
 const GET_HEADER_DATA = gql`
   query GetHeaderData {
@@ -36,7 +37,7 @@ export default function Header() {
             .split('; ')
             .find(row => row.startsWith('user_name='))
             ?.split('=')[1];
-        
+
         if (nameCookie) {
             setUserInitial(decodeURIComponent(nameCookie).charAt(0).toUpperCase());
         } else {
@@ -70,7 +71,7 @@ export default function Header() {
 
     const navLinks = [
         { name: 'Home', href: '/' },
-        { name: 'About Me', href: '/about'},
+        { name: 'About Me', href: '/about' },
         { name: 'Contact', href: '/contact' },
     ];
 
@@ -79,19 +80,28 @@ export default function Header() {
     const dynamicTitle = data?.generalSettings?.title || "Vantura";
     const showTitle = data?.displaySiteTitle !== false;
 
+    const [isRedirecting, setIsRedirecting] = useState(false);
+    const router = useRouter();
+
+    const handleDashboardClick = (e) => {
+        e.preventDefault();
+        setIsRedirecting(true);
+        router.push("/admin/dashboard");
+    };
+
     return (
         <header className="sticky bg-[#F5F5F5]/80 top-0 z-50 w-full border-b border-gray-200 backdrop-blur-md text-slate-900">
             <div className="flex h-full flex-col">
                 <div className="px-4 md:px-10 lg:px-20 xl:px-40 flex justify-center py-3">
                     <div className="w-full flex items-center justify-between max-w-[1280px]">
-                        
+
                         {/* Logo & Site Title */}
                         <Link href="/" className="flex items-center gap-4 cursor-pointer group">
                             <div className="text-[#FFA500] transition-transform group-hover:scale-110 flex items-center justify-center">
                                 {logoUrl ? (
-                                    <img 
-                                        src={logoUrl} 
-                                        alt={data?.siteLogo?.altText || "Logo"} 
+                                    <img
+                                        src={logoUrl}
+                                        alt={data?.siteLogo?.altText || "Logo"}
                                         style={{ width: `${customWidth}px`, height: 'auto' }}
                                         className="object-contain transition-all duration-300"
                                     />
@@ -118,20 +128,35 @@ export default function Header() {
                                         <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#FFA500] transition-all group-hover:w-full"></span>
                                     </Link>
                                 ))}
-                                
+
                                 {/* Login / Register or User Profile */}
-                                <div className="flex items-center gap-3 border-l border-gray-300 pl-8">
-                                    {userInitial ? (
-                                        <Link href="/admin/dashboard" className="size-9 rounded-full bg-[#FFA500] text-white flex items-center justify-center text-sm font-bold shadow-md hover:brightness-110 transition-all cursor-pointer ring-2 ring-white">
-                                            {userInitial}
-                                        </Link>
-                                    ) : (
-                                        <>
-                                            <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-[#FFA500] transition-colors">Log in</Link>
-                                            <Link href="/register" className="text-sm font-semibold bg-[#FFA500] text-white px-6 py-2.5 rounded-full hover:shadow-lg transition-all">Register</Link>
-                                        </>
-                                    )}
-                                </div>
+  
+<div className="flex items-center gap-3 border-l border-gray-300 pl-8">
+  {userInitial ? (
+    <button
+      onClick={handleDashboardClick}
+      disabled={isRedirecting}
+      className={`size-9 rounded-full bg-[#FFA500] text-white flex items-center justify-center text-sm font-bold shadow-md hover:brightness-110 transition-all cursor-pointer ring-2 ring-white relative ${
+        isRedirecting ? "opacity-80 cursor-wait" : ""
+      }`}
+    >
+      {isRedirecting ? (
+        // Simple Loading Spinner
+        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      ) : (
+        userInitial
+      )}
+    </button>
+  ) : (
+    <>
+      <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-[#FFA500] transition-colors">Log in</Link>
+      <Link href="/register" className="text-sm font-semibold bg-[#FFA500] text-white px-6 py-2.5 rounded-full hover:shadow-lg transition-all">Register</Link>
+    </>
+  )}
+</div>
                             </nav>
                         </div>
 
@@ -152,11 +177,11 @@ export default function Header() {
                                 {link.name}
                             </Link>
                         ))}
-                        
+
                         <div className="pt-5 border-t border-gray-100 flex flex-col gap-4">
                             {userInitial ? (
-                                <Link 
-                                    href="/admin/dashboard" 
+                                <Link
+                                    href="/admin/dashboard"
                                     onClick={() => setIsOpen(false)}
                                     className="flex items-center gap-3 text-base font-bold text-slate-700"
                                 >

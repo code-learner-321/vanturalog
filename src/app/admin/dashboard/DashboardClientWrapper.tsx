@@ -20,9 +20,14 @@ const GET_LOGO_DATA = gql`
 const GET_USER_SETTINGS = gql`
   query GetUserSettings($id: ID!) {
     user(id: $id, idType: DATABASE_ID) {
-      databaseId
+        id
+        databaseId
       name
       avatarUrl
+      description
+    userSettingsGroup {
+        userSettings
+      }
     }
   }
 `;
@@ -43,6 +48,33 @@ const UPDATE_USER_PROFILE = gql`
   }
 `;
 
+const GET_ALL_CATEGORIES = gql`
+  query GetAllCategories {
+    categories(first: 100) {
+      nodes {
+        name
+        slug
+      }
+    }
+  }
+`;
+
+const UPDATE_USER_CATEGORY = gql`
+  mutation UpdateUserCategory($id: ID!, $categorySlug: String!) {
+    updateUser(input: { 
+      id: $id, 
+      userSettingsGroup: { 
+        homepage_category_slug: $categorySlug 
+      } 
+    }) {
+      user {
+        userSettingsGroup {
+          homepage_category_slug
+        }
+      }
+    }
+  }
+`;
 const handleLogout = async () => {
     try {
         await fetch('/api/auth', {
@@ -232,10 +264,102 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Public Display Name</label>
                 <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full text-lg font-bold outline-none bg-transparent text-gray-800" required />
             </div>
-            <button type="submit" disabled={status === 'loading'} className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all ${status === 'loading' ? 'bg-gray-100 text-gray-400' : 'bg-orange-600 text-white hover:bg-orange-700'}`}>
+            <button type="submit" disabled={status === 'loading'} className={`w-full cursor-pointer py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all ${status === 'loading' ? 'bg-gray-100 text-gray-400' : 'bg-orange-600 text-white hover:bg-orange-700'}`}>
                 {status === 'loading' ? 'Updating...' : status === 'success' ? 'Saved Successfully' : 'Save Changes'}
             </button>
         </form>
+    );
+}
+function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
+    const router = useRouter();
+    const [status, setStatus] = useState<'idle' | 'saving' | 'success'>('idle');
+
+    // 1. Initialize with an empty string
+    const [selectedCategory, setSelectedCategory] = useState('');
+
+    const { data: freshData, loading: userLoading, refetch } = useQuery(GET_USER_SETTINGS, {
+        variables: { id: userData?.databaseId?.toString() },
+        fetchPolicy: 'network-only',
+        skip: !userData?.databaseId
+    });
+
+    const { data: catData, loading: catsLoading } = useQuery(GET_ALL_CATEGORIES);
+
+    // 2. This Effect "Syncs" the database value to the dropdown state
+    useEffect(() => {
+        // Access the field as 'userSettings' instead of 'homepageCategorySlug'
+        const savedValue = freshData?.user?.userSettingsGroup?.userSettings;
+
+        console.log("GraphQL Data Received:", savedValue);
+
+        if (savedValue) {
+            setSelectedCategory(savedValue);
+        } else if (freshData?.user) {
+            setSelectedCategory("");
+        }
+    }, [freshData]);
+
+    const handleSave = async () => {
+        setStatus('saving');
+        try {
+            const response = await fetch(`https://vanturalog.najubudeen.info/wp-json/wp/v2/users/${userData.databaseId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwtToken}`
+                },
+                body: JSON.stringify({
+                    acf: {
+                        // This must match the ACF "Field Name"
+                        homepage_category_slug: selectedCategory
+                    }
+                })
+            });
+
+            if (response.ok) {
+                setStatus('success');
+                await refetch(); // Pull fresh data from GraphQL
+                router.refresh();
+                setTimeout(() => setStatus('idle'), 3000);
+            }
+        } catch (err) {
+            setStatus('idle');
+        }
+    };
+
+    if (userLoading || catsLoading) return <div className="p-8 text-orange-600 animate-pulse text-center font-bold">Loading...</div>;
+
+    return (
+        <div className="space-y-6 max-w-md">
+            <div className="p-6 bg-white border rounded-2xl shadow-sm">
+                <h2 className="text-lg font-black text-slate-900 mb-1">Homepage Category</h2>
+
+                <div className="space-y-4">
+                    <div className="p-4 border-2 border-gray-100 rounded-2xl bg-slate-50">
+                        <select
+                            // Use the new path for the key to ensure it re-renders on load
+                            key={freshData?.user?.userSettingsGroup?.userSettings || 'loading'}
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="w-full bg-transparent font-bold text-slate-800 outline-none"
+                        >
+                            <option value="">Select a Category to Show</option>
+                            {catData?.categories?.nodes.map((cat: any) => (
+                                <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={handleSave}
+                        disabled={status === 'saving'}
+                        className="w-full py-4 rounded-2xl font-black bg-orange-600 text-white"
+                    >
+                        {status === 'saving' ? 'Saving...' : 'Save Category'}
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -274,6 +398,15 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                         {isAdmin && (
                             <button onClick={() => { router.push('?view=logo'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'logo' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
                                 <span className="material-symbols-outlined">straighten</span> Logo Settings
+                            </button>
+                        )}
+                        {isAdmin && (
+                            <button
+                                onClick={() => { router.push('?view=categories'); setIsMobileMenuOpen(false); }}
+                                className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <span className="material-symbols-outlined text-[20px]">category</span>
+                                Category Settings
                             </button>
                         )}
                     </nav>
@@ -316,6 +449,7 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                     )}
                     {currentView === 'logo' && isAdmin && <div className="max-w-md animate-fade-in"><LogoSettingsManager /></div>}
                     {currentView === 'user_settings' && <div className="max-w-md animate-fade-in"><UserSettingsManager userData={userData} jwtToken={jwtToken} /></div>}
+                    {currentView === 'categories' && <div className="max-w-md animate-fade-in"><PostCategorySettingsManager userData={userData} jwtToken={jwtToken} /></div>}
                 </div>
             </main>
         </div>
