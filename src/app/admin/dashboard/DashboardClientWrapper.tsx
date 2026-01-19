@@ -213,6 +213,7 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
     }, [data, userData]);
 
     const handleSaveProfile = async (e: React.FormEvent) => {
+        const wpRestApiUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_REST_API_URL;
         e.preventDefault();
         if (!safeUserId) return;
         setStatus('loading');
@@ -221,7 +222,7 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
             if (selectedFile) {
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                const uploadRes = await fetch("https://vanturalog.najubudeen.info/wp-json/wp/v2/media", {
+                const uploadRes = await fetch(wpRestApiUrl!, {
                     method: 'POST',
                     body: formData,
                     headers: { 'Authorization': `Bearer ${jwtToken}` }

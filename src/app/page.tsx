@@ -42,19 +42,11 @@ const GET_POSTS = gql`
   }
 `;
 
-// const GET_ADMIN_SETTINGS = gql`
-//   query GetAdminSettings {
-//     user(id: "1", idType: DATABASE_ID) {
-//       description
-//     }
-//   }
-// `;
-
 const GET_ADMIN_SETTINGS = gql`
   query GetAdminSettings {
     user(id: "1", idType: DATABASE_ID) {
       userSettingsGroup {
-        userSettings  # Ensure this matches your GraphQL IDE name
+        userSettings
       }
     }
   }
@@ -70,9 +62,6 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const postsPerPage = 6;
 
-  // const { loading, error, data } = useQuery(GET_POSTS, {
-  //   variables: { categoryName: "india-tour" },
-  // });
   // 1. Fetch the saved category first
   const { data: settingsData } = useQuery(GET_ADMIN_SETTINGS);
 
@@ -288,59 +277,81 @@ export default function Home() {
 
           {/* GRID SECTION */}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {(searchQuery ? filteredPosts : currentGridPosts).map((post) => (
-              <article key={post.id} className="group flex flex-col bg-[#F5F5F5] rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
-                <div className="w-full aspect-[16/10] relative bg-gray-200 overflow-hidden">
-                  <Link href={post.uri}>
-                    {
-                      <Image
-                        src={post.featuredImage?.node?.sourceUrl || "https://via.placeholder.com/600x400?text=No+Image+Available"}
-                        alt={post.title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    }
-                  </Link>
-                </div>
-                <div className="flex justify-between items-center px-6 pt-6">
-                  <span className="text-[10px] font-bold text-accent-100 uppercase tracking-widest">
-                    {post.categories?.nodes?.[0]?.name || "Travel"}
-                  </span>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span className="text-[11px] font-medium tracking-tighter">{calculateReadTime(post.content || post.excerpt)}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col flex-1 p-6 pt-3">
-                  <h3 className="font-heading text-xl font-light text-slate-900 mb-3 leading-snug group-hover:text-accent-100 transition-colors">
-                    <Link href={post.uri}>{post.title}</Link>
-                  </h3>
-                  <div className="font-body text-slate-500 text-sm line-clamp-3 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: cleanExcerpt(post.excerpt, 25) }} />
-                  <div className="mt-auto pt-5 border-t border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full overflow-hidden relative bg-white border border-slate-100">
-                        {post.author?.node?.avatar?.url ? (
-                          <img src={post.author.node.avatar.url} alt={post.author.node.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="flex items-center justify-center h-full bg-accent-100 text-white text-[10px]">
-                            {post.author?.node?.name?.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">{post.author?.node?.name}</span>
-                    </div>
-                    <Link href={post.uri} className="flex items-center gap-1 text-accent-100 font-bold text-xs uppercase group/link">
-                      <span>Read</span>
-                      <svg className="w-5 h-5 transition-transform duration-300 group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
+          {/* GRID SECTION */}
+{searchQuery && filteredPosts.length === 0 ? (
+  /* No Results State */
+  <div className="flex flex-col items-center justify-center py-20 text-center bg-[#F5F5F5] rounded-3xl border-2 border-dashed border-gray-200 mb-12">
+    <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-slate-400">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+    </div>
+    <h3 className="text-xl font-bold text-slate-900 mb-2">No search results found</h3>
+    <p className="text-slate-500 max-w-xs mx-auto">
+      We couldn't find any articles matching <span className="font-bold text-accent-100">"{searchQuery}"</span>. 
+      Try a different keyword or check your spelling.
+    </p>
+    <button 
+      onClick={() => setSearchQuery("")}
+      className="mt-6 text-sm font-bold text-accent-100 hover:underline cursor-pointer"
+    >
+      Clear search
+    </button>
+  </div>
+) : (
+  /* Existing Grid Logic */
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+    {(searchQuery ? filteredPosts : currentGridPosts).map((post) => (
+      <article key={post.id} className="group flex flex-col bg-[#F5F5F5] rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+        <div className="w-full aspect-[16/10] relative bg-gray-200 overflow-hidden">
+          <Link href={post.uri}>
+            <Image
+              src={post.featuredImage?.node?.sourceUrl || "https://via.placeholder.com/600x400?text=No+Image+Available"}
+              alt={post.title}
+              fill
+              className="object-cover group-hover:scale-110 transition-transform duration-700"
+            />
+          </Link>
+        </div>
+        <div className="flex justify-between items-center px-6 pt-6">
+          <span className="text-[10px] font-bold text-accent-100 uppercase tracking-widest">
+            {post.categories?.nodes?.[0]?.name || "Travel"}
+          </span>
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span className="text-[11px] font-medium tracking-tighter">{calculateReadTime(post.content || post.excerpt)}</span>
           </div>
+        </div>
+        <div className="flex flex-col flex-1 p-6 pt-3">
+          <h3 className="font-heading text-xl font-light text-slate-900 mb-3 leading-snug group-hover:text-accent-100 transition-colors">
+            <Link href={post.uri}>{post.title}</Link>
+          </h3>
+          <div className="font-body text-slate-500 text-sm line-clamp-3 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: cleanExcerpt(post.excerpt, 25) }} />
+          <div className="mt-auto pt-5 border-t border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full overflow-hidden relative bg-white border border-slate-100">
+                {post.author?.node?.avatar?.url ? (
+                  <img src={post.author.node.avatar.url} alt={post.author.node.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-accent-100 text-white text-[10px]">
+                    {post.author?.node?.name?.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="text-xs font-bold text-slate-700">{post.author?.node?.name}</span>
+            </div>
+            <Link href={post.uri} className="flex items-center gap-1 text-accent-100 font-bold text-xs uppercase group/link">
+              <span>Read</span>
+              <svg className="w-5 h-5 transition-transform duration-300 group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+)}
 
           {/* PAGINATION UI */}
           {!searchQuery && totalPages > 1 && (
