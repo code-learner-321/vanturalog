@@ -156,7 +156,7 @@ function HomeContent() {
 
   const authorData = latestPost?.author?.node;
 
-  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-slate-500 font-bold">Loading Page...</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse bg-white text-slate-500 font-bold">Loading Page...</div>;
   if (error) return <div className="p-10 text-red-500 text-center">Error: {error.message}</div>;
 
   return (
@@ -316,7 +316,7 @@ function HomeContent() {
 export default function Home() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen items-center justify-center animate-pulse text-slate-500">
+      <div className="flex h-screen items-center justify-center animate-pulse bg-white text-slate-500">
         Loading Page...
       </div>
     }>
