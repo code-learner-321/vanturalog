@@ -112,14 +112,10 @@ const handleLogout = async () => {
 // --- LOGO MANAGER ---
 function LogoSettingsManager() {
     const router = useRouter();
-
     const { data, loading, refetch } = useQuery<LogoData>(GET_LOGO_DATA, { fetchPolicy: 'network-only' });
-
     const [dimensions, setDimensions] = useState({ width: 200, height: 100 });
     const [displayTitle, setDisplayTitle] = useState(true);
     const [status, setStatus] = useState('');
-
-    // Fixed: Added Type to useMutation
     const [updateSettings] = useMutation<UpdateLogoMutationData>(UPDATE_LOGO_SETTINGS);
 
     useEffect(() => {
@@ -139,7 +135,6 @@ function LogoSettingsManager() {
                     displayTitle: displayTitle
                 }
             });
-            // TypeScript now recognizes updateLogoSettings
             if (response.data?.updateLogoSettings?.success) {
                 setStatus('✅ Saved successfully!');
                 await refetch();
@@ -199,26 +194,11 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
         skip: !safeUserId,
     });
 
-    // 2. Handle the error logic in a useEffect
     useEffect(() => {
         if (error) {
             const msg = error.message.toLowerCase();
-            console.error("GraphQL Background Error:", msg);
-
-            // STOP the auto-logout for these specific errors
-            if (
-                msg.includes('internal server error') ||
-                msg.includes('expired') ||
-                msg.includes('fetch failed')
-            ) {
-                console.warn("Session issues detected, but staying on page via Fallback Mode.");
-                return;
-            }
-
-            // Only logout if it is a hard 'Unauthorized'
-            if (msg.includes('unauthorized')) {
-                handleLogout();
-            }
+            if (msg.includes('internal server error') || msg.includes('expired') || msg.includes('fetch failed')) return;
+            if (msg.includes('unauthorized')) handleLogout();
         }
     }, [error]);
 
@@ -256,7 +236,6 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
                 const mediaData = await uploadRes.json();
                 if (mediaData.id) uploadedMediaId = parseInt(mediaData.id);
             }
-
             await updateProfile({ variables: { userId: safeUserId, displayName, mediaId: uploadedMediaId } });
             setStatus('success');
             setSelectedFile(null);
@@ -302,22 +281,16 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
     const router = useRouter();
     const [status, setStatus] = useState<'idle' | 'saving' | 'success'>('idle');
     const [selectedCategory, setSelectedCategory] = useState('');
-
     const { data: freshData, loading: userLoading, refetch } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
         variables: { id: userData?.databaseId?.toString() },
         fetchPolicy: 'network-only',
         skip: !userData?.databaseId
     });
-
     const { data: catData, loading: catsLoading } = useQuery<AllCategoriesData>(GET_ALL_CATEGORIES);
 
     useEffect(() => {
         const savedValue = freshData?.user?.userSettingsGroup?.userSettings;
-        if (savedValue) {
-            setSelectedCategory(savedValue);
-        } else if (freshData?.user) {
-            setSelectedCategory("");
-        }
+        if (savedValue) setSelectedCategory(savedValue);
     }, [freshData]);
 
     const handleSave = async () => {
@@ -325,24 +298,16 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
         try {
             const response = await fetch(`https://vanturalog.najubudeen.info/wp-json/wp/v2/users/${userData.databaseId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${jwtToken}`
-                },
-                body: JSON.stringify({
-                    acf: { homepage_category_slug: selectedCategory }
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ acf: { homepage_category_slug: selectedCategory } })
             });
-
             if (response.ok) {
                 setStatus('success');
                 await refetch();
                 router.refresh();
                 setTimeout(() => setStatus('idle'), 3000);
             }
-        } catch (err) {
-            setStatus('idle');
-        }
+        } catch (err) { setStatus('idle'); }
     };
 
     if (userLoading || catsLoading) return <div className="p-8 text-orange-600 animate-pulse text-center font-bold">Loading...</div>;
@@ -353,12 +318,7 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
                 <h2 className="text-lg font-black text-slate-900 mb-1">Homepage Category</h2>
                 <div className="space-y-4">
                     <div className="p-4 border-2 border-gray-100 rounded-2xl bg-slate-50">
-                        <select
-                            key={freshData?.user?.userSettingsGroup?.userSettings || 'loading'}
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="w-full bg-transparent font-bold text-slate-800 outline-none"
-                        >
+                        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-transparent font-bold text-slate-800 outline-none">
                             <option value="">Select a Category to Show</option>
                             {catData?.categories?.nodes.map((cat: any) => (
                                 <option key={cat.slug} value={cat.slug}>{cat.name}</option>
@@ -385,16 +345,31 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
     const isAdmin = userData?.role === 'administrator';
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black">
+        <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black overflow-hidden h-screen">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
+            {/* MOBILE OVERLAY */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* SIDEBAR */}
             <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-full flex flex-col p-6 border-r border-slate-100">
-                    <div className="flex items-center gap-3 mb-10 group">
-                        <div className="size-9 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:-rotate-3 font-black text-xl tracking-tighter">V</div>
-                        <h1 className="text-xl font-black tracking-tighter text-slate-900">
-                            <Link href="/" className="hover:text-orange-600 transition-colors">{headerData?.generalSettings?.title || "Vantura"}</Link>
-                        </h1>
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="flex items-center gap-3 group">
+                            <div className="size-9 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg font-black text-xl tracking-tighter">V</div>
+                            <h1 className="text-xl font-black tracking-tighter text-slate-900">
+                                <Link href="/" className="hover:text-orange-600 transition-colors">{headerData?.generalSettings?.title || "Vantura"}</Link>
+                            </h1>
+                        </div>
+                        {/* Close button for mobile */}
+                        <button className="md:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}>
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
                     </div>
 
                     <nav className="space-y-1.5 flex-1">
@@ -437,19 +412,34 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                 </div>
             </aside>
 
-            <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-                <div className="max-w-4xl mx-auto">
-                    {currentView === 'dashboard' && (
-                        <div className="animate-fade-in">
-                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-2">Hello, {userData?.name || "User"}!</h2>
-                            <p className="text-gray-500 font-medium">Welcome back to your dashboard.</p>
-                        </div>
-                    )}
-                    {currentView === 'logo' && isAdmin && <div className="max-w-md animate-fade-in"><LogoSettingsManager /></div>}
-                    {currentView === 'user_settings' && <div className="max-w-md animate-fade-in"><UserSettingsManager userData={userData} jwtToken={jwtToken} /></div>}
-                    {currentView === 'categories' && <div className="max-w-md animate-fade-in"><PostCategorySettingsManager userData={userData} jwtToken={jwtToken} /></div>}
-                </div>
-            </main>
+            {/* CONTENT AREA */}
+            <div className="flex-1 flex flex-col min-w-0">
+                
+                {/* MOBILE TOP BAR (The missing Hamburger) */}
+                <header className="md:hidden flex items-center justify-between bg-white px-6 py-4 border-b">
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-slate-600">
+                        <span className="material-symbols-outlined">menu</span>
+                    </button>
+                    <span className="font-black text-slate-900 uppercase tracking-tighter">VanturaLog</span>
+                    <div className="size-8 rounded-full overflow-hidden border">
+                         <img src={userData?.avatarUrl || "https://www.gravatar.com/avatar/?d=mp&s=128"} alt="" />
+                    </div>
+                </header>
+
+                <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+                    <div className="max-w-4xl mx-auto">
+                        {currentView === 'dashboard' && (
+                            <div className="animate-fade-in">
+                                <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-2">Hello, {userData?.name || "User"}!</h2>
+                                <p className="text-gray-500 font-medium">Welcome back to your dashboard.</p>
+                            </div>
+                        )}
+                        {currentView === 'logo' && isAdmin && <div className="max-w-md animate-fade-in"><LogoSettingsManager /></div>}
+                        {currentView === 'user_settings' && <div className="max-w-md animate-fade-in"><UserSettingsManager userData={userData} jwtToken={jwtToken} /></div>}
+                        {currentView === 'categories' && <div className="max-w-md animate-fade-in"><PostCategorySettingsManager userData={userData} jwtToken={jwtToken} /></div>}
+                    </div>
+                </main>
+            </div>
         </div>
     );
 }
