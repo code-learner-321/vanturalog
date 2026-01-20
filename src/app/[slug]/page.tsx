@@ -264,8 +264,8 @@ export default function SinglePost() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
-      <h1 className="text-3xl font-bold mb-6">{post.title}</h1>
-      <div className="prose mb-10" dangerouslySetInnerHTML={{ __html: post.content }} />
+      <h1 className="text-3xl font-bold mb-6 text-slate-900">{post.title}</h1>
+      <div className="prose mb-10 text-slate-500" dangerouslySetInnerHTML={{ __html: post.content }} />
 
       {commentTree.length > 0 && (
         <section className="mb-10">

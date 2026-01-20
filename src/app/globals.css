@@ -13,6 +13,7 @@
   --color-primary-white: #FFFFFF;
   --color-secondary: #F5F5F5;
   --color-accent-100: #FFA500;
+  --color-text: #171717;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
