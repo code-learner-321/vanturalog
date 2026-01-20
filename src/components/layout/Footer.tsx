@@ -5,7 +5,7 @@ export default function Footer() {
         /* The footer tag itself has the border and background, spanning 100% width */
         <footer className="w-full bg-[#F5F5F5] pt-10 pb-10 mt-auto">
             <div className="max-w-5xl mx-auto px-4 md:px-8 text-center text-sm text-text-light">
-                <p className='text-black'>© 2026 Najubudeen Wordpress Developer. All rights reserved.</p>
+                <p className='text-slate-600'>© 2026 Najubudeen Wordpress Developer. All rights reserved.</p>
             </div>
         </footer>
     )
