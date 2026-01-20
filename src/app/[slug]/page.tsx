@@ -259,7 +259,7 @@ export default function SinglePost() {
     );
   };
 
-  if (loading) return <p className="flex h-screen items-center justify-center animate-pulse">Loading...</p>;
+  if (loading) return <p className="flex h-screen items-center justify-center text-slate-500 bg-white animate-pulse">Loading...</p>;
   if (error || !data?.postBy) return <div className="text-center py-20">Post not found</div>;
 
   return (
@@ -277,7 +277,7 @@ export default function SinglePost() {
       )}
 
       <section className="bg-gray-50 p-6 rounded-xl border">
-        <h3 className="text-xl font-bold mb-4">Leave a Comment</h3>
+        <h3 className="text-xl font-bold mb-4 text-slate-900">Leave a Comment</h3>
         {statusMsg && (
           <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 transition-all duration-300 ${
             statusMsg.includes('Error') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
