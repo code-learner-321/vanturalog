@@ -175,7 +175,7 @@ function HomeContent() {
                 </div>
               </Link>
               <div className="flex flex-col text-center md:text-left">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-2">Written by {authorData?.name || "Sarah Jenkins"}</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-2 text-black">Written by {authorData?.name || "Sarah Jenkins"}</h3>
                 <p className="text-lg text-slate-600 font-normal leading-relaxed mb-4 max-w-2xl font-body">
                   {authorData?.description && authorData.description !== activeCategory 
                     ? authorData.description 
