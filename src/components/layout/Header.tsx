@@ -7,6 +7,18 @@ import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { useRouter } from "next/navigation";
 
+interface HeaderData {
+    siteLogo: {
+        sourceUrl: string;
+        altText: string;
+    } | null;
+    logoWidth: number | null;
+    displaySiteTitle: boolean | null;
+    generalSettings: {
+        title: string;
+    } | null;
+}
+
 const GET_HEADER_DATA = gql`
   query GetHeaderData {
     siteLogo {
@@ -33,11 +45,10 @@ export default function Header() {
     const [userInitial, setUserInitial] = useState<string | null>(null);
     const pathname = usePathname();
     const router = useRouter();
-
-    // 1. Change to string state to track WHICH path is loading
     const [activeRedirect, setActiveRedirect] = useState<string | null>(null);
 
-    const { data } = useQuery(GET_HEADER_DATA);
+    // Add <HeaderData> here to tell TypeScript what to expect
+    const { data } = useQuery<HeaderData>(GET_HEADER_DATA);
 
     // 2. Reset the spinner whenever the pathname (URL) changes
     useEffect(() => {

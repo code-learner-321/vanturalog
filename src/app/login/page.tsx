@@ -4,11 +4,31 @@ import { useState } from "react";
 import { useMutation } from "@apollo/client/react";
 import { LOGIN_USER } from "@/graphql/mutations";
 
+// --- TYPES ---
+interface LoginResponse {
+  login: {
+    authToken: string;
+    user: {
+      id: string;
+      databaseId: number;
+      name: string;
+      displayName: string;
+      email: string;
+      avatarUrl: string;
+      roles: {
+        nodes: Array<{
+          name: string;
+        }>;
+      };
+    };
+  };
+}
+
 export default function LoginPage() {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [errorMsg, setErrorMsg] = useState("");
 
-  const [login, { loading }] = useMutation(LOGIN_USER, {
+  const [login, { loading }] = useMutation<LoginResponse>(LOGIN_USER, {
     onCompleted: async (data) => {
       const token = data?.login?.authToken;
       const user = data?.login?.user;
@@ -30,8 +50,8 @@ export default function LoginPage() {
               name: userName,
               role: userRole,
               email: userEmail,
-              avatarUrl: avatarUrl, // Passing to API
-              userId: userId,       // Passing to API
+              avatarUrl: avatarUrl,
+              userId: userId,
             }),
           });
 

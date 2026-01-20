@@ -7,24 +7,43 @@ const httpLink = createHttpLink({
   uri: WP_URL,
 });
 
-const authLink = setContext((_, { headers }) => {
-const your_token_variable = cookieStore.get('auth_token')?.value;
+const authLink = setContext(async (_, { headers }) => {
+  let token: string | undefined;
+
+  // Check if we are on the Server
+  if (typeof window === 'undefined') {
+    try {
+      // Dynamically import next/headers so the client bundler ignores it
+      const { cookies } = await import('next/headers');
+      const cookieStore = await cookies();
+      token = cookieStore.get('auth_token')?.value;
+    } catch (e) {
+      console.error("Error fetching cookies on server:", e);
+    }
+  } else {
+    // We are on the Client
+    token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('auth_token='))
+      ?.split('=')[1];
+  }
+
   return {
     headers: {
       ...headers,
-      authorization: `Bearer ${your_token_variable}`,
-    }
-  }
+      authorization: token ? `Bearer ${token}` : "",
+    },
+  };
 });
 
 export const client = new ApolloClient({
+  // Use authLink on both sides now that it's safe
   link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
 });
 
 export async function wpFetch(query: string, variables = {}) {
   try {
-    // Use the GraphQL proxy for better error handling and CORS support
     const res = await fetch('/api/graphql', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -46,7 +65,6 @@ export async function wpFetch(query: string, variables = {}) {
     
     return json.data;
   } catch (error: any) {
-    // Improve error messages for network errors
     if (error.message === "Failed to fetch" || error.name === "TypeError") {
       throw new Error("Unable to connect to the server. Please check your internet connection and try again.");
     }

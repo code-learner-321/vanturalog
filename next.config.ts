@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/graphql',
+        destination: 'https://vanturalog.najubudeen.info/graphql',
+      },
+    ]
+  },
   reactCompiler: true,
   devIndicators:false
 };

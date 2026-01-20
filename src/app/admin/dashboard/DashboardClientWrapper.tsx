@@ -6,6 +6,44 @@ import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
 
+// --- TYPES ---
+interface LogoData {
+    siteLogo?: { sourceUrl: string };
+    logoWidth?: number;
+    logoHeight?: number;
+    displaySiteTitle?: boolean;
+    generalSettings?: { title: string };
+}
+
+interface UpdateLogoMutationData {
+    updateLogoSettings: {
+        success: boolean;
+    };
+}
+
+interface UserSettingsData {
+    user?: {
+        id: string;
+        databaseId: number;
+        name: string;
+        avatarUrl: string;
+        description: string;
+        userSettingsGroup?: {
+            userSettings: string;
+            homepage_category_slug?: string;
+        };
+    };
+}
+
+interface AllCategoriesData {
+    categories: {
+        nodes: Array<{
+            name: string;
+            slug: string;
+        }>;
+    };
+}
+
 // GraphQL Definitions
 const GET_LOGO_DATA = gql`
   query GetLogoData {
@@ -59,22 +97,6 @@ const GET_ALL_CATEGORIES = gql`
   }
 `;
 
-const UPDATE_USER_CATEGORY = gql`
-  mutation UpdateUserCategory($id: ID!, $categorySlug: String!) {
-    updateUser(input: { 
-      id: $id, 
-      userSettingsGroup: { 
-        homepage_category_slug: $categorySlug 
-      } 
-    }) {
-      user {
-        userSettingsGroup {
-          homepage_category_slug
-        }
-      }
-    }
-  }
-`;
 const handleLogout = async () => {
     try {
         await fetch('/api/auth', {
@@ -90,11 +112,15 @@ const handleLogout = async () => {
 // --- LOGO MANAGER ---
 function LogoSettingsManager() {
     const router = useRouter();
-    const { data, loading, refetch } = useQuery(GET_LOGO_DATA, { fetchPolicy: 'network-only' });
+
+    const { data, loading, refetch } = useQuery<LogoData>(GET_LOGO_DATA, { fetchPolicy: 'network-only' });
+
     const [dimensions, setDimensions] = useState({ width: 200, height: 100 });
     const [displayTitle, setDisplayTitle] = useState(true);
     const [status, setStatus] = useState('');
-    const [updateSettings] = useMutation(UPDATE_LOGO_SETTINGS);
+
+    // Fixed: Added Type to useMutation
+    const [updateSettings] = useMutation<UpdateLogoMutationData>(UPDATE_LOGO_SETTINGS);
 
     useEffect(() => {
         if (data) {
@@ -113,10 +139,11 @@ function LogoSettingsManager() {
                     displayTitle: displayTitle
                 }
             });
+            // TypeScript now recognizes updateLogoSettings
             if (response.data?.updateLogoSettings?.success) {
                 setStatus('✅ Saved successfully!');
                 await refetch();
-                router.refresh(); // INTERNAL REFRESH
+                router.refresh();
                 setTimeout(() => setStatus(''), 3000);
             }
         } catch (err) { setStatus('❌ Error saving branding.'); }
@@ -165,19 +192,17 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
         if (!id || id === "undefined") return null;
         return parseInt(id.toString(), 10);
     }, [userData]);
-    if (safeUserId) {
-        console.log("userid exists" + safeUserId)
-    } else {
-        console.log("userid does not exist" + safeUserId)
-    }
-    // Inside UserSettingsManager
-    const { data, refetch, loading: queryLoading } = useQuery(GET_USER_SETTINGS, {
+
+    const { data, refetch, error } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
         variables: { id: safeUserId?.toString() },
         fetchPolicy: 'cache-and-network',
         skip: !safeUserId,
-        // Apply this logic to BOTH useQuery(GET_LOGO_DATA) and useQuery(GET_USER_SETTINGS)
-        onError: (err) => {
-            const msg = err.message.toLowerCase();
+    });
+
+    // 2. Handle the error logic in a useEffect
+    useEffect(() => {
+        if (error) {
+            const msg = error.message.toLowerCase();
             console.error("GraphQL Background Error:", msg);
 
             // STOP the auto-logout for these specific errors
@@ -187,15 +212,16 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
                 msg.includes('fetch failed')
             ) {
                 console.warn("Session issues detected, but staying on page via Fallback Mode.");
-                return; // <--- This prevents handleLogout() from being called
+                return;
             }
 
-            // Only logout if it is a hard 'Unauthorized' (meaning the user is definitely logged out)
+            // Only logout if it is a hard 'Unauthorized'
             if (msg.includes('unauthorized')) {
                 handleLogout();
             }
         }
-    });
+    }, [error]);
+
     useEffect(() => { setIsHydrated(true); }, []);
 
     const [updateProfile] = useMutation(UPDATE_USER_PROFILE);
@@ -235,7 +261,7 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
             setStatus('success');
             setSelectedFile(null);
             await refetch();
-            router.refresh(); // INTERNAL REFRESH (Updates Sidebar)
+            router.refresh();
             setTimeout(() => setStatus('idle'), 3000);
         } catch (err) { setStatus('error'); }
     };
@@ -271,28 +297,22 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
         </form>
     );
 }
+
 function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
     const router = useRouter();
     const [status, setStatus] = useState<'idle' | 'saving' | 'success'>('idle');
-
-    // 1. Initialize with an empty string
     const [selectedCategory, setSelectedCategory] = useState('');
 
-    const { data: freshData, loading: userLoading, refetch } = useQuery(GET_USER_SETTINGS, {
+    const { data: freshData, loading: userLoading, refetch } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
         variables: { id: userData?.databaseId?.toString() },
         fetchPolicy: 'network-only',
         skip: !userData?.databaseId
     });
 
-    const { data: catData, loading: catsLoading } = useQuery(GET_ALL_CATEGORIES);
+    const { data: catData, loading: catsLoading } = useQuery<AllCategoriesData>(GET_ALL_CATEGORIES);
 
-    // 2. This Effect "Syncs" the database value to the dropdown state
     useEffect(() => {
-        // Access the field as 'userSettings' instead of 'homepageCategorySlug'
         const savedValue = freshData?.user?.userSettingsGroup?.userSettings;
-
-        console.log("GraphQL Data Received:", savedValue);
-
         if (savedValue) {
             setSelectedCategory(savedValue);
         } else if (freshData?.user) {
@@ -310,16 +330,13 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
                     'Authorization': `Bearer ${jwtToken}`
                 },
                 body: JSON.stringify({
-                    acf: {
-                        // This must match the ACF "Field Name"
-                        homepage_category_slug: selectedCategory
-                    }
+                    acf: { homepage_category_slug: selectedCategory }
                 })
             });
 
             if (response.ok) {
                 setStatus('success');
-                await refetch(); // Pull fresh data from GraphQL
+                await refetch();
                 router.refresh();
                 setTimeout(() => setStatus('idle'), 3000);
             }
@@ -334,11 +351,9 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
         <div className="space-y-6 max-w-md">
             <div className="p-6 bg-white border rounded-2xl shadow-sm">
                 <h2 className="text-lg font-black text-slate-900 mb-1">Homepage Category</h2>
-
                 <div className="space-y-4">
                     <div className="p-4 border-2 border-gray-100 rounded-2xl bg-slate-50">
                         <select
-                            // Use the new path for the key to ensure it re-renders on load
                             key={freshData?.user?.userSettingsGroup?.userSettings || 'loading'}
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -350,12 +365,7 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
                             ))}
                         </select>
                     </div>
-
-                    <button
-                        onClick={handleSave}
-                        disabled={status === 'saving'}
-                        className="w-full py-4 rounded-2xl font-black bg-orange-600 text-white"
-                    >
+                    <button onClick={handleSave} disabled={status === 'saving'} className="w-full py-4 rounded-2xl font-black bg-orange-600 text-white">
                         {status === 'saving' ? 'Saving...' : 'Save Category'}
                     </button>
                 </div>
@@ -368,7 +378,7 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
 export default function DashboardClientWrapper({ userData, jwtToken }: { userData: any, jwtToken: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { data: headerData } = useQuery(GET_LOGO_DATA);
+    const { data: headerData } = useQuery<LogoData>(GET_LOGO_DATA);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const currentView = searchParams.get('view') || 'dashboard';
@@ -378,7 +388,6 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
         <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
-            {/* SIDEBAR */}
             <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-full flex flex-col p-6 border-r border-slate-100">
                     <div className="flex items-center gap-3 mb-10 group">
@@ -402,34 +411,23 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                             </button>
                         )}
                         {isAdmin && (
-                            <button
-                                onClick={() => { router.push('?view=categories'); setIsMobileMenuOpen(false); }}
-                                className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                <span className="material-symbols-outlined text-[20px]">category</span>
-                                Category Settings
+                            <button onClick={() => { router.push('?view=categories'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                <span className="material-symbols-outlined text-[20px]">category</span> Category Settings
                             </button>
                         )}
                     </nav>
 
-                    {/* RESTORED: LEFT BOTTOM USER PROFILE WITH IMAGE */}
                     <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-3 overflow-hidden text-left">
                             <div className="relative size-11 shrink-0">
                                 <div className="size-full rounded-full overflow-hidden border border-slate-200 shadow-sm bg-orange-50 flex items-center justify-center">
-                                    <img
-                                        src={userData?.avatarUrl || "https://www.gravatar.com/avatar/?d=mp&s=128"}
-                                        className="w-full h-full object-cover"
-                                        alt="Profile"
-                                    />
+                                    <img src={userData?.avatarUrl || "https://www.gravatar.com/avatar/?d=mp&s=128"} className="w-full h-full object-cover" alt="Profile" />
                                 </div>
                                 <span className="absolute bottom-0.5 right-0.5 size-3 bg-green-500 border-2 border-white rounded-full"></span>
                             </div>
                             <div className="truncate">
                                 <p className="text-[13px] font-black text-slate-900 truncate leading-none mb-1">{userData?.name || "User Name"}</p>
-                                <span className="inline-flex px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold uppercase rounded">
-                                    {userData?.role || "subscriber"}
-                                </span>
+                                <span className="inline-flex px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold uppercase rounded">{userData?.role || "subscriber"}</span>
                             </div>
                         </div>
                         <button onClick={handleLogout} className="size-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 transition-all cursor-pointer">
@@ -439,7 +437,6 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                 </div>
             </aside>
 
-            {/* MAIN CONTENT */}
             <main className="flex-1 p-6 md:p-12 overflow-y-auto">
                 <div className="max-w-4xl mx-auto">
                     {currentView === 'dashboard' && (
