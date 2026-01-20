@@ -263,7 +263,7 @@ export default function SinglePost() {
   if (error || !data?.postBy) return <div className="text-center py-20">Post not found</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 bg-white">
       <h1 className="text-3xl font-bold mb-6">{post.title}</h1>
       <div className="prose mb-10" dangerouslySetInnerHTML={{ __html: post.content }} />
 
