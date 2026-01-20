@@ -267,7 +267,7 @@ export default function SinglePost() {
   };
 
   if (loading) return <p className="flex h-screen items-center justify-center text-slate-500 bg-white animate-pulse">Loading...</p>;
-  if (error || !data?.postBy) return <div className="text-center py-20">Post not found</div>;
+  if (error || !data?.postBy) return <div className="text-center bg-white py-20">Post not found</div>;
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
