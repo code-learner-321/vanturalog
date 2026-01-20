@@ -77,20 +77,20 @@ export default function SinglePost() {
     const userEmail = getCookie("user_email");
     if (userName) {
       setIsLoggedIn(true);
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData(prev => ({
+        ...prev,
         author: decodeURIComponent(userName),
         email: userEmail ? decodeURIComponent(userEmail) : ""
       }));
     }
   }, []);
 
-  const { loading, error, data, refetch } = useQuery<{ postBy?: { databaseId: number; title: string; content: string; comments?: { nodes: any[] } } }>(GET_SINGLE_POST, { 
+  const { loading, error, data, refetch } = useQuery<{ postBy?: { databaseId: number; title: string; content: string; comments?: { nodes: any[] } } }>(GET_SINGLE_POST, {
     variables: { slug: slug },
     skip: !slug,
     errorPolicy: "all",
     fetchPolicy: "cache-first",
-    notifyOnNetworkStatusChange: false 
+    notifyOnNetworkStatusChange: false
   });
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function SinglePost() {
 
   const post = data?.postBy as any;
   const allComments = useMemo(() => {
-    return (post?.comments?.nodes || []).filter((comment: any) => 
+    return (post?.comments?.nodes || []).filter((comment: any) =>
       comment.status === 'APPROVE' || comment.status === 'approve'
     );
   }, [post?.comments?.nodes]);
@@ -182,7 +182,7 @@ export default function SinglePost() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
       hour: '2-digit', minute: '2-digit'
     });
@@ -215,21 +215,21 @@ export default function SinglePost() {
     const avatarUrl = comment.author?.node?.avatar?.url;
 
     return (
-      <div 
-        key={comment.id} 
+      <div
+        key={comment.id}
         className={`${isReply ? 'ml-8 mt-4 border-l-2 border-orange-200 pl-4' : 'mb-6'} bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow`}
       >
         <div className="flex items-start gap-3">
           {/* User Image Start */}
           <div className="flex-shrink-0">
             {avatarUrl ? (
-              <Image 
-                src={avatarUrl} 
-                alt={authorName} 
-                width={40} 
-                height={40} 
+              <Image
+                src={avatarUrl}
+                alt={authorName}
+                width={40}
+                height={40}
                 className="rounded-full"
-                unoptimized 
+                unoptimized
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
@@ -241,12 +241,19 @@ export default function SinglePost() {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-bold text-gray-800">{authorName}</span>
-              <span className="text-sm text-gray-500">{formatDate(comment.date)}</span>
+              {/* Text starts very small (text-[10px]), becomes larger (sm:text-sm) on tablets/desktops */}
+              <span className="font-bold text-[14px] sm:text-sm text-gray-800">
+                {authorName}
+              </span>
+
+              {/* Text starts small (text-xs), becomes standard (sm:text-sm) on tablets/desktops */}
+              <span className="text-xs sm:text-sm text-gray-500">
+                {formatDate(comment.date)}
+              </span>
             </div>
-            <div 
-              className="text-gray-700 prose prose-sm max-w-none" 
-              dangerouslySetInnerHTML={{ __html: comment.content }} 
+            <div
+              className="text-gray-700 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: comment.content }}
             />
           </div>
         </div>
@@ -279,13 +286,12 @@ export default function SinglePost() {
       <section className="bg-gray-50 p-6 rounded-xl border">
         <h3 className="text-xl font-bold mb-4 text-slate-900">Leave a Comment</h3>
         {statusMsg && (
-          <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 transition-all duration-300 ${
-            statusMsg.includes('Error') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
-          }`}>
+          <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 transition-all duration-300 ${statusMsg.includes('Error') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
+            }`}>
             <span className="flex-1">{statusMsg}</span>
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {!isLoggedIn ? (
             <div className="p-4 bg-red-50 text-red-600 rounded">You must be logged in to comment.</div>
@@ -298,7 +304,7 @@ export default function SinglePost() {
             rows={4}
             placeholder="What's on your mind?"
             value={formData.content}
-            onChange={(e) => setFormData({...formData, content: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             disabled={!isLoggedIn || submitting}
           />
 
