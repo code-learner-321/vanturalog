@@ -247,12 +247,12 @@ export default function SinglePost() {
               </span>
 
               {/* Text starts small (text-xs), becomes standard (sm:text-sm) on tablets/desktops */}
-              <span className="text-xs sm:text-sm text-gray-500">
+              <span className="font-bold text-[14px] sm:text-sm text-gray-500">
                 {formatDate(comment.date)}
               </span>
             </div>
             <div
-              className="text-gray-700 prose prose-sm max-w-none"
+              className="text-[14px] sm:text-sm text-gray-700 prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: comment.content }}
             />
           </div>
