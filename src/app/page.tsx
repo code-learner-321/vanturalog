@@ -317,7 +317,7 @@ export default function Home() {
   return (
     <Suspense fallback={
       <div className="flex h-screen items-center justify-center animate-pulse text-slate-500">
-        Loading India Tour Content...
+        Loading Page...
       </div>
     }>
       <HomeContent />
