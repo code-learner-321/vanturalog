@@ -269,7 +269,7 @@ export default function SinglePost() {
 
       {commentTree.length > 0 && (
         <section className="mb-10">
-          <h2 className="text-2xl font-bold mb-6">Comments ({allComments.length})</h2>
+          <h2 className="text-2xl font-bold mb-6 text-slate-900">Comments ({allComments.length})</h2>
           <div className="space-y-4">
             {commentTree.map((comment: any) => renderComment(comment))}
           </div>
