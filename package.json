@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.11",
+    "@wordpress/block-library": "^9.38.0",
     "graphql": "^16.12.0",
     "next": "16.0.10",
     "react": "19.2.1",

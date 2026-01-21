@@ -32,3 +32,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* custom css added,, */
+.entry-content > * {
+  display: block !important;
+  float: none !important;
+  width: 100% !important;
+  margin-bottom: 1.5rem;
+}
+
+/* Force specific list behavior */
+.entry-content ul, 
+.entry-content ol {
+  display: flex !important;
+  flex-direction: column !important;
+  list-style: disc outside !important;
+  padding-left: 2rem !important;
+}
+
+.entry-content li {
+  display: list-item !important;
+  width: auto !important;
+}
+
+/* Fix Row/Group blocks */
+.wp-block-group.is-layout-flex, 
+.wp-block-row {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
