@@ -1,23 +1,26 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@layer components {
+  /* This ensures your max-width container works correctly */
+  .layout-container {
+    @apply w-full mx-auto;
+  }
+
+  /* This fixes the WordPress Social Icons alignment */
+  .wp-block-social-links {
+    @apply flex flex-row flex-wrap gap-4 list-none p-0 !important;
+  }
+
+  .wp-block-social-link {
+    @apply w-8 h-8 flex items-center justify-center transition-transform hover:scale-110 !important;
+  }
 }
 
-@theme inline {
-  /* Link your Next.js font variables to Tailwind names */
-  --font-heading: var(--font-quicksand);
-  --font-body: var(--font-heebo);
-
-  --color-primary-white: #FFFFFF;
-  --color-secondary: #F5F5F5;
-  --color-accent-100: #FFA500;
-  --color-text: #171717;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Optional: Smooth scrolling for the pagination handlePageChange function */
+html {
+  scroll-behavior: smooth;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,7 +35,6 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
 /* custom css added,, */
 .entry-content > * {
   display: block !important;
@@ -61,4 +63,127 @@ body {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
+}
+
+/* social icons */
+
+/* src/app/globals.css */
+
+.wp-block-social-links {
+  display: flex !important;
+  min-height: 40px !important; /* Force height so it doesn't collapse */
+  gap: 15px !important;
+  list-style: none !important;
+  margin: 20px 0 !important;
+}
+
+.wp-block-social-links li {
+  display: block !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.wp-block-social-links svg {
+  width: 32px !important;
+  height: 32px !important;
+  fill: #ffa500 !important; /* Force your accent color */
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* src/app/globals.css */
+
+.screen-reader-text,
+.wp-block-social-link-label {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    display: none !important; /* Adding this as a backup */
+}
+
+/* 2. FIX SOCIAL LINK LAYOUT */
+.wp-block-social-links {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+    list-style: none !important;
+    padding: 0 !important;
+}
+
+.wp-block-social-link {
+    display: block !important;
+}
+
+/* .wp-block-social-link svg {
+    width: 24px !important;
+    height: 24px !important;
+    fill: currentColor !important;
+} */
+
+/* src/app/globals.css */
+
+/* 1. Center the Icons and Remove List Styling */
+.wp-block-social-links {
+    @apply flex flex-row flex-wrap justify-center items-center gap-6 list-none p-0 !important;
+    margin: 1.5rem 0 !important; /* Spacing above/below the icons */
+}
+
+/* 2. Individual Icon Container */
+.wp-social-link {
+    @apply m-0 p-0 flex items-center justify-center !important;
+}
+
+/* 3. The Anchor & SVG Styling */
+.wp-block-social-link-anchor {
+    @apply flex items-center justify-center transition-all duration-300 ease-in-out !important;
+    color: #4b5563 !important; /* A nice slate gray default color */
+    text-decoration: none !important;
+}
+
+.wp-block-social-link-anchor svg {
+    @apply w-7 h-7 fill-current transition-all duration-300 !important;
+}
+
+/* 4. THE AESTHETIC HOVER EFFECT */
+.wp-block-social-link-anchor:hover {
+    @apply scale-125 !important; /* Makes the icon grow slightly */
+    color: #ffa500 !important; /* Your specific orange color */
+}
+
+
+/* src/app/globals.css */
+
+/* 1. Remove all default spacing that WordPress/Prose adds to the last element */
+.prose :last-child {
+  margin-bottom: 0 !important;
+}
+
+/* 2. Hide empty paragraphs so they don't take up height */
+.prose p:empty {
+  display: none !important;
+}
+
+/* 3. Center the social icons list itself */
+.wp-block-social-links {
+  justify-content: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  padding: 0 !important;
+}
+
+/* 4. Aesthetic Hover Effect */
+.wp-block-social-link-anchor {
+  transition: all 0.3s ease !important;
+}
+
+.wp-block-social-link-anchor:hover {
+  color: #ffa500 !important;
+  transform: scale(1.15);
 }
