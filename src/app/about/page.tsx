@@ -85,6 +85,7 @@ export default async function about() {
 
         {/* Sidebar Area */}
         <aside className="sm:col-span-4 space-y-8 sm:space-y-10 order-2">
+          <h1>My content</h1>
           {sidebarAuthors.length > 0 ? (
             sidebarAuthors.map((sidebar: AuthorNode, index: number) => (
               <div key={index} className="bg-secondary overflow-hidden rounded-xl border-[1px] border-primary/10 p-6">
