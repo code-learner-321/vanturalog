@@ -26,6 +26,7 @@ export default function Contact() {
 
   // Fixed: Added React.FormEvent type
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
     e.preventDefault();
     setStatus('loading');
 
@@ -38,9 +39,12 @@ export default function Contact() {
     `;
 
     try {
-      const response = await fetch('https://vanturalog.najubudeen.info/graphql', {
+      const response = await fetch(wpUrl!, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({
           query: SEND_MAIL_MUTATION,
           variables: formData,
