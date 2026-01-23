@@ -38,7 +38,7 @@ export default function Contact() {
     `;
 
     try {
-      const response = await fetch('https://your-wordpress-domain.com/graphql', {
+      const response = await fetch('https://vanturalog.najubudeen.info/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
