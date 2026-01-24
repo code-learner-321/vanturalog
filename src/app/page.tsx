@@ -178,7 +178,7 @@ function HomeContent() {
           {/* AUTHOR SECTION */}
           <div className="py-12 border-b border-gray-100 mb-6">
             <div className="flex flex-col md:flex-row items-center gap-8 bg-[#F5F5F5] p-8 rounded-3xl">
-              <Link href={`/about/${authorData?.slug || '#'}`} className="relative flex-shrink-0 group/avatar">
+              <Link href={`/about/`} className="relative flex-shrink-0 group/avatar">
                 <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-white shadow-xl bg-slate-200 transition-transform duration-500 group-hover/avatar:scale-105">
                   {authorData?.avatar?.url && (
                     <img alt={authorData.name} className="w-full h-full object-cover" src={authorData.avatar.url} />
@@ -192,7 +192,7 @@ function HomeContent() {
                     ? authorData.description 
                     : "Professional travel writer sharing insights from the heart of adventure."}
                 </p>
-                <Link href={`/about/${authorData?.slug || '#'}`} className="group/author-link inline-flex items-center justify-center md:justify-start gap-2 text-accent-100 font-bold text-xs uppercase tracking-widest transition-colors">
+                <Link href={`/about/`} className="group/author-link inline-flex items-center justify-center md:justify-start gap-2 text-accent-100 font-bold text-xs uppercase tracking-widest transition-colors">
                   <span>Know More</span>
                   <svg className="w-4 h-4 transition-transform duration-300 group-hover/author-link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
