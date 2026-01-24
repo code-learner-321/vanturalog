@@ -2,6 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+
+.has-thin-font-weight { font-weight: 100 !important; }
+.has-extra-light-font-weight { font-weight: 200 !important; }
+.has-light-font-weight { font-weight: 300 !important; }
+.has-normal-font-weight { font-weight: 400 !important; }
+.has-medium-font-weight { font-weight: 500 !important; }
+.has-semi-bold-font-weight { font-weight: 600 !important; }
+.has-bold-font-weight { font-weight: 700 !important; }
+.has-extra-bold-font-weight { font-weight: 800 !important; }
+.has-black-font-weight { font-weight: 900 !important; }
+
+/* globals.css */
+
+:root {
+  --wp--preset--color--vivid-red: #cf2e2e;
+  --wp--preset--color--vivid-cyan-blue: #0693e3;
+  --wp--preset--color--vivid-green-cyan: #00d084;
+  --wp--preset--color--luminous-vivid-amber: #fcb900;
+  --wp--preset--color--luminous-vivid-orange: #ff6900;
+  --wp--preset--color--pale-pink: #f78da7;
+  /* Add any other custom colors you have in your WP theme here */
+}
+
+.has-vivid-red-color { color: var(--wp--preset--color--vivid-red) !important; }
+.has-vivid-cyan-blue-color { color: var(--wp--preset--color--vivid-cyan-blue) !important; }
+.has-luminous-vivid-orange-color { color: var(--wp--preset--color--luminous-vivid-orange) !important; }
+.has-luminous-vivid-amber-color { color: var(--wp--preset--color--luminous-vivid-amber) !important; }
+
+/* Background Color Presets */
+.has-vivid-red-background-color { background-color: var(--wp--preset--color--vivid-red) !important; }
+.has-vivid-cyan-blue-background-color { background-color: var(--wp--preset--color--vivid-cyan-blue) !important; }
+.has-luminous-vivid-orange-background-color { background-color: var(--wp--preset--color--luminous-vivid-orange) !important; }
+.has-luminous-vivid-amber-background-color { background-color: var(--wp--preset--color--luminous-vivid-amber) !important; }
+.has-vivid-green-cyan-background-color { background-color: var(--wp--preset--color--vivid-green-cyan) !important; }
+.has-pale-pink-background-color { background-color: var(--wp--preset--color--pale-pink) !important; }
+
+/* If a block has a background, we usually need to adjust the padding of that specific block */
+.prose [class*="-background-color"] {
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+}
+
+
 @layer components {
   /* This ensures your max-width container works correctly */
   .layout-container {

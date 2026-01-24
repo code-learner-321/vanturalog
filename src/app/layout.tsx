@@ -16,17 +16,19 @@ const headingFont = Quicksand({
 
 const bodyFont = Heebo({
   subsets: ["latin"],
-  weight: ["200", "400", "700"],
+  weight: ['100', '200', '300', '400', '700', '900'],
   variable: "--font-heebo",
 });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
+  weight: ['100', '200', '300', '400', '700', '900'],
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  weight: ['100', '200', '300', '400', '700', '900'],
   subsets: ["latin"],
 });
 
@@ -43,7 +45,7 @@ export default function RootLayout({
   return (
     // 2. NOW THESE VARIABLES ARE DEFINED AND WILL WORK
     <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${bodyFont.variable} ${headingFont.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AppoloWrapper>
           
           {/* Conditional Header */}

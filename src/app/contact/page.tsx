@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Define a type for the form data
 interface ContactFormData {
   name: string;
   email: string;
   subject: string;
   message: string;
+}
+
+// Interface for the Sidebar Post Type
+interface SidebarNode {
+  title: string;
+  content: string;
 }
 
 export default function Contact() {
@@ -19,12 +24,49 @@ export default function Contact() {
     message: ''
   });
 
-  // Fixed: Added React.ChangeEvent type
+  // --- UPDATED: State is now an array ---
+  const [sidebarAuthors, setSidebarAuthors] = useState<SidebarNode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // --- UPDATED: Fetch Sidebar Content ---
+  useEffect(() => {
+    const fetchSidebar = async () => {
+      const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
+      const GET_SIDEBAR_CONTENT = `
+              query GetContactSidebar {
+                contactMeSidebars(where: { orderby: { field: DATE, order: ASC } }) {
+                  nodes {
+                    title
+                    content
+                  }
+                }
+              }
+            `;
+
+      try {
+        const res = await fetch(wpUrl!, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: GET_SIDEBAR_CONTENT }),
+        });
+        const json = await res.json();
+        if (json.data?.contactMeSidebars?.nodes) {
+          setSidebarAuthors(json.data.contactMeSidebars.nodes);
+        }
+      } catch (err) {
+        console.error("Error fetching sidebar:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSidebar();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Fixed: Added React.FormEvent type
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
     e.preventDefault();
@@ -41,8 +83,8 @@ export default function Contact() {
     try {
       const response = await fetch(wpUrl!, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
+        headers: {
+          'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({
@@ -56,12 +98,15 @@ export default function Contact() {
       if (result.data?.sendEmail?.success) {
         setStatus('success');
         setFormData({ name: '', email: '', subject: '', message: '' });
+        setTimeout(() => setStatus('idle'), 5000);
       } else {
         setStatus('error');
+        setTimeout(() => setStatus('idle'), 5000);
       }
     } catch (error) {
       console.error("Submission Error:", error);
       setStatus('error');
+      setTimeout(() => setStatus('idle'), 5000);
     }
   };
 
@@ -77,63 +122,64 @@ export default function Contact() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-4">
           <div className="lg:col-span-8 order-2 lg:order-1">
+            {/* Form code remains the same... */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <label className="flex flex-col flex-1">
                   <p className="text-[#181610] dark:text-[#f5f3f0] text-base font-medium leading-normal pb-2">Name</p>
-                  <input 
+                  <input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4" 
-                    placeholder="Your name" 
-                    type="text" 
+                    className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4"
+                    placeholder="Your name"
+                    type="text"
                   />
                 </label>
                 <label className="flex flex-col flex-1">
                   <p className="text-[#181610] dark:text-[#f5f3f0] text-base font-medium leading-normal pb-2">Email Address</p>
-                  <input 
+                  <input
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4" 
-                    placeholder="hello@example.com" 
-                    type="email" 
+                    className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4"
+                    placeholder="hello@example.com"
+                    type="email"
                   />
                 </label>
               </div>
               <label className="flex flex-col">
                 <p className="text-[#181610] dark:text-[#f5f3f0] text-base font-medium leading-normal pb-2">Subject</p>
-                <input 
+                <input
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
                   required
-                  className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4" 
-                  placeholder="What is this about?" 
-                  type="text" 
+                  className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] h-14 p-4"
+                  placeholder="What is this about?"
+                  type="text"
                 />
               </label>
               <label className="flex flex-col">
                 <p className="text-[#181610] dark:text-[#f5f3f0] text-base font-medium leading-normal pb-2">Message</p>
-                <textarea 
+                <textarea
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
                   required
-                  className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] p-4 resize-none" 
-                  placeholder="How can we help you?" 
+                  className="form-input flex w-full rounded-lg text-[#181610] dark:text-white border border-[#e7e2da] dark:border-[#524636] bg-white dark:bg-[#2d2417] p-4 resize-none"
+                  placeholder="How can we help you?"
                   rows={6}
                 ></textarea>
               </label>
-              
+
               <div className="flex flex-col gap-4">
                 <div className="flex justify-start">
-                  <button 
+                  <button
                     disabled={status === 'loading'}
-                    className="flex min-w-[200px] cursor-pointer items-center justify-center rounded-lg h-14 px-8 bg-[#ffa500] text-[#181610] text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50" 
+                    className="flex min-w-[200px] cursor-pointer items-center justify-center rounded-lg h-14 px-8 bg-[#ffa500] text-[#181610] text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50"
                     type="submit"
                   >
                     {status === 'loading' ? 'Sending...' : 'Send Message'}
@@ -147,33 +193,32 @@ export default function Contact() {
 
           {/* SIDEBAR */}
           <div className="lg:col-span-4 flex flex-col gap-10 order-1 lg:order-2">
-            <div className="flex flex-col gap-6 p-8 bg-secondary dark:bg-[#2d2417] rounded-xl border border-[#e7e2da] dark:border-[#3d3428]">
-              <div>
-                <h3 className="text-xl font-bold mb-2">Email us</h3>
-                <p className="text-primary text-base font-medium">hello@vanturalog.com</p>
-              </div>
-              <div className="pt-4 border-t border-[#e7e2da] dark:border-[#3d3428]">
-                <h3 className="text-lg font-bold mb-4">Follow our journey</h3>
-                <div className="flex gap-4">
-                  <a className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#3d3428] text-[#181610] dark:text-[#f5f3f0] hover:bg-primary border border-[#e7e2da]" href="#"><span className="material-symbols-outlined text-[20px]">share</span></a>
-                  <a className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#3d3428] text-[#181610] dark:text-[#f5f3f0] hover:bg-primary border border-[#e7e2da]" href="#"><span className="material-symbols-outlined text-[20px]">photo_camera</span></a>
-                  <a className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#3d3428] text-[#181610] dark:text-[#f5f3f0] hover:bg-primary border border-[#e7e2da]" href="#"><span className="material-symbols-outlined text-[20px]">alternate_email</span></a>
+            {isLoading ? (
+              // --- LOADING SKELETON STATE ---
+              <>
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-secondary rounded-xl border-[1px] border-primary/10 p-6 animate-pulse">
+                    <div className="h-4 bg-primary/10 rounded w-3/4 mb-4"></div>
+                    <div className="h-3 bg-primary/5 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-primary/5 rounded w-5/6 mb-2"></div>
+                    <div className="h-3 bg-primary/5 rounded w-4/6"></div>
+                  </div>
+                ))}
+              </>
+            ) : sidebarAuthors.length > 0 ? (
+              // --- ACTUAL CONTENT ---
+              sidebarAuthors.map((sidebar: SidebarNode, index: number) => (
+                <div key={index} className="overflow-hidden rounded-xl">
+                  <div
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: sidebar.content }}
+                  />
                 </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-6 p-8 bg-white dark:bg-[#ffa500] rounded-xl border-l-4 border-[#ffa500] shadow-sm border border-[#e7e2da]">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">lightbulb</span>
-                <h3 className="text-xl font-bold">Quick Tips</h3>
-              </div>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs uppercase tracking-widest font-bold text-[#8d7c5e]">Response time</p>
-                  <p className="text-base font-medium">Within 48 hours</p>
-                </div>
-              </div>
-            </div>
+              ))
+            ) : (
+              // --- EMPTY STATE ---
+              <p className="text-sm italic opacity-50">No sidebar content found.</p>
+            )}
           </div>
         </div>
       </div>
