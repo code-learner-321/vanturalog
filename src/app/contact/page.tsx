@@ -9,8 +9,13 @@ interface ContactFormData {
   message: string;
 }
 
-// Interface for the Sidebar Post Type
 interface SidebarNode {
+  title: string;
+  content: string;
+}
+
+// Interface for the Top Content
+interface TopContentNode {
   title: string;
   content: string;
 }
@@ -24,43 +29,58 @@ export default function Contact() {
     message: ''
   });
 
-  // --- UPDATED: State is now an array ---
   const [sidebarAuthors, setSidebarAuthors] = useState<SidebarNode[]>([]);
+  // --- NEW: State for Top Content ---
+  const [topContent, setTopContent] = useState<TopContentNode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- UPDATED: Fetch Sidebar Content ---
   useEffect(() => {
-    const fetchSidebar = async () => {
+    const fetchData = async () => {
       const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
-      const GET_SIDEBAR_CONTENT = `
-              query GetContactSidebar {
-                contactMeSidebars(where: { orderby: { field: DATE, order: ASC } }) {
-                  nodes {
-                    title
-                    content
-                  }
-                }
-              }
-            `;
+      
+      // --- UPDATED: Combined Query ---
+      const GET_CONTACT_PAGE_DATA = `
+        query GetContactPageData {
+          contactTopContents(first: 1) {
+            nodes {
+              title
+              content
+            }
+          }
+          contactMeSidebars(where: { orderby: { field: DATE, order: ASC } }) {
+            nodes {
+              title
+              content
+            }
+          }
+        }
+      `;
 
       try {
         const res = await fetch(wpUrl!, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: GET_SIDEBAR_CONTENT }),
+          body: JSON.stringify({ query: GET_CONTACT_PAGE_DATA }),
         });
         const json = await res.json();
+        
+        // Handle Top Content
+        if (json.data?.contactTopContents?.nodes?.[0]) {
+          setTopContent(json.data.contactTopContents.nodes[0]);
+        }
+
+        // Handle Sidebar Content
         if (json.data?.contactMeSidebars?.nodes) {
           setSidebarAuthors(json.data.contactMeSidebars.nodes);
         }
       } catch (err) {
-        console.error("Error fetching sidebar:", err);
+        console.error("Error fetching contact page data:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSidebar();
+    fetchData();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -113,16 +133,29 @@ export default function Contact() {
   return (
     <main className="layout-container h-full grow flex-col">
       <div className="px-4 md:px-10 lg:px-20 xl:px-40 justify-center py-5">
+        
+        {/* --- DYNAMIC TOP CONTENT BLOCK --- */}
         <div className="flex pt-12 pb-24 flex-col gap-3">
-          <h1 className="text-[#181610] dark:text-[#f5f3f0] text-5xl lg:text-6xl font-black leading-tight tracking-tighter italic">Let’s Connect</h1>
-          <p className="text-[#8d7c5e] dark:text-[#b0a086] text-lg lg:text-xl font-normal leading-normal max-w-2xl">
-            Have a question about a destination or want to collaborate on a future adventure? Drop a line below and let's start a conversation.
-          </p>
+          {isLoading ? (
+            <div className="animate-pulse">
+              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-[#181610] dark:text-[#f5f3f0] text-5xl lg:text-6xl font-black leading-tight tracking-tighter italic">
+                {topContent?.title || 'Let’s Connect'}
+              </h1>
+              <div 
+                className="text-[#8d7c5e] dark:text-[#b0a086] text-lg lg:text-xl font-normal leading-normal max-w-2xl prose-p:m-0"
+                dangerouslySetInnerHTML={{ __html: topContent?.content || '' }}
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-4">
           <div className="lg:col-span-8 order-2 lg:order-1">
-            {/* Form code remains the same... */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <label className="flex flex-col flex-1">
@@ -191,10 +224,8 @@ export default function Contact() {
             </form>
           </div>
 
-          {/* SIDEBAR */}
           <div className="lg:col-span-4 flex flex-col gap-10 order-1 lg:order-2">
             {isLoading ? (
-              // --- LOADING SKELETON STATE ---
               <>
                 {[1, 2].map((i) => (
                   <div key={i} className="bg-secondary rounded-xl border-[1px] border-primary/10 p-6 animate-pulse">
@@ -206,7 +237,6 @@ export default function Contact() {
                 ))}
               </>
             ) : sidebarAuthors.length > 0 ? (
-              // --- ACTUAL CONTENT ---
               sidebarAuthors.map((sidebar: SidebarNode, index: number) => (
                 <div key={index} className="overflow-hidden rounded-xl">
                   <div
@@ -216,7 +246,6 @@ export default function Contact() {
                 </div>
               ))
             ) : (
-              // --- EMPTY STATE ---
               <p className="text-sm italic opacity-50">No sidebar content found.</p>
             )}
           </div>

@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { useState, Suspense } from "react"; // Added Suspense
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+// --- QUERIES ---
 const GET_POSTS = gql`
   query get_posts($categoryName: String) {
     posts(where: { categoryName: $categoryName }, first: 100) {
@@ -34,6 +35,7 @@ const GET_POSTS = gql`
             avatar(size: 512) {
               url
             }
+            slug
           }
         }
       }
@@ -91,7 +93,6 @@ interface SettingsData {
   };
 }
 
-// 1. Move the original logic into a sub-component
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,22 +103,35 @@ function HomeContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const postsPerPage = 6;
 
-  // Fetch settings
-  const { data: settingsData } = useQuery<SettingsData>(GET_ADMIN_SETTINGS);
+  // 1. Fetch settings first
+  const { data: settingsData, loading: settingsLoading } = useQuery<SettingsData>(GET_ADMIN_SETTINGS);
   const activeCategory = settingsData?.user?.userSettingsGroup?.userSettings || "india-tour";
 
-  // Fetch posts
-  const { loading, error, data } = useQuery<PostsData>(GET_POSTS, {
+  // 2. Fetch posts (skipped until settings are available)
+  const { loading: postsLoading, error, data } = useQuery<PostsData>(GET_POSTS, {
     variables: { categoryName: activeCategory },
     skip: !settingsData, 
   });
 
+  // --- COMPREHENSIVE LOADING CHECK ---
+  // This ensures the page stays blank (or shows a loader) until EVERYTHING is ready
+  if (settingsLoading || postsLoading) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-white space-y-4">
+        <div className="w-12 h-12 border-4 border-[#ffa500] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-bold animate-pulse">Loading Page...</p>
+      </div>
+    );
+  }
+
+  if (error) return <div className="p-10 text-red-500 text-center">Error: {error.message}</div>;
+
+  // --- HELPERS ---
   const calculateReadTime = (htmlContent = "") => {
     const wordsPerMinute = 200;
     const textOnly = htmlContent.replace(/<[^>]*>/g, '');
     const wordCount = textOnly.split(/\s+/).filter(word => word.length > 0).length;
-    const time = Math.ceil(wordCount / wordsPerMinute);
-    return `${time} min read`;
+    return `${Math.ceil(wordCount / wordsPerMinute)} min read`;
   };
 
   const cleanExcerpt = (html = "", limit = 50) => {
@@ -135,8 +149,8 @@ function HomeContent() {
     return words.slice(0, limit).join(" ") + "...";
   };
 
+  // --- DATA PROCESSING ---
   const allPosts = data?.posts?.nodes || [];
-  
   const filteredPosts = allPosts.filter((post) =>
     post.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -156,9 +170,6 @@ function HomeContent() {
 
   const authorData = latestPost?.author?.node;
 
-  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse bg-white text-slate-500 font-bold">Loading Page...</div>;
-  if (error) return <div className="p-10 text-red-500 text-center">Error: {error.message}</div>;
-
   return (
     <main className="font-heading font-extralight layout-container flex h-full grow flex-col bg-white">
       <div className="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
@@ -175,11 +186,11 @@ function HomeContent() {
                 </div>
               </Link>
               <div className="flex flex-col text-center md:text-left">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-2 text-black">Written by {authorData?.name || "Sarah Jenkins"}</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-black mb-2">Written by {authorData?.name || "Author"}</h3>
                 <p className="text-lg text-slate-600 font-normal leading-relaxed mb-4 max-w-2xl font-body">
                   {authorData?.description && authorData.description !== activeCategory 
                     ? authorData.description 
-                    : "Professional travel writer and tour guide sharing insights from the heart of India."}
+                    : "Professional travel writer sharing insights from the heart of adventure."}
                 </p>
                 <Link href={`/about/${authorData?.slug || '#'}`} className="group/author-link inline-flex items-center justify-center md:justify-start gap-2 text-accent-100 font-bold text-xs uppercase tracking-widest transition-colors">
                   <span>Know More</span>
@@ -196,7 +207,7 @@ function HomeContent() {
             <div className="mb-8">
               <label className="flex flex-col gap-3 w-full max-w-[480px]">
                 <h3 className="font-heading text-xl capitalize font-bold text-slate-900 mb-3 leading-snug">Search your favourite tour spot</h3>
-                <div className="flex w-full flex-1 items-stretch rounded-full h-14 shadow-sm bg-secondary border border-gray-200 transition-all duration-300 focus-within:shadow-md focus-within:border-[#ffa500] focus-within:ring-1 focus-within:ring-[#ffa500] overflow-hidden">
+                <div className="flex w-full flex-1 items-stretch rounded-full h-14 shadow-sm bg-[#F5F5F5] border border-gray-200 transition-all duration-300 focus-within:shadow-md focus-within:border-[#ffa500] focus-within:ring-1 focus-within:ring-[#ffa500] overflow-hidden">
                   <div className="text-slate-400 flex items-center justify-center pl-5">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -241,7 +252,7 @@ function HomeContent() {
                 </div>
                 <div className="w-full aspect-video rounded-xl overflow-hidden @[864px]:w-1/2 shadow-2xl relative bg-slate-200">
                   <Link href={latestPost.uri} className="block w-full h-full">
-                    <Image src={latestPost.featuredImage?.node?.sourceUrl || ""} alt={latestPost.title} fill className="object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110" />
+                    <Image src={latestPost.featuredImage?.node?.sourceUrl || ""} alt={latestPost.title} fill className="object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110" priority />
                   </Link>
                 </div>
               </div>
@@ -290,7 +301,7 @@ function HomeContent() {
             </div>
           )}
 
-          {/* PAGINATION UI */}
+          {/* PAGINATION */}
           {!searchQuery && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mb-20">
               <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 cursor-pointer rounded-full border border-gray-200 disabled:opacity-30 hover:bg-gray-50 transition-colors">
@@ -312,12 +323,11 @@ function HomeContent() {
   );
 }
 
-// 2. Default export with Suspense Wrapper
 export default function Home() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen items-center justify-center animate-pulse bg-white text-slate-500">
-        Loading Page...
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
       </div>
     }>
       <HomeContent />
