@@ -5,55 +5,7 @@ import { gql } from "@apollo/client";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-
-const GET_SINGLE_POST = gql`
-  query GetSinglePost($slug: String!) {
-    postBy(slug: $slug) {
-      databaseId
-      title
-      content
-      comments(where: { orderby: COMMENT_DATE }) {
-        nodes {
-          id
-          databaseId
-          content
-          date
-          status
-          parentDatabaseId
-          author { 
-            node { 
-              name 
-              avatar { url }
-            } 
-          }
-        }
-      }
-    }
-    globalStyles {
-      css
-    }
-  }
-`;
-
-const CREATE_COMMENT = gql`
-  mutation CreateComment($author: String!, $email: String!, $content: String!, $postId: Int!, $clientMutationId: String!) {
-    createComment(input: {
-      author: $author, 
-      authorEmail: $email, 
-      content: $content, 
-      commentOn: $postId,
-      clientMutationId: $clientMutationId
-    }) {
-      success
-      comment { 
-        id 
-        databaseId
-        content 
-        status
-      }
-    }
-  }
-`;
+import { GET_SINGLE_POST,CREATE_COMMENT } from "@/graphql/mutations";
 
 export default function SinglePost() {
   const params = useParams();

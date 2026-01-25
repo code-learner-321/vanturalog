@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
+import { GET_LOGO_DATA,GET_USER_SETTINGS,UPDATE_LOGO_SETTINGS,UPDATE_USER_PROFILE,GET_ALL_CATEGORIES } from '@/graphql/queries';
 
 // --- TYPES ---
 interface LogoData {
@@ -43,59 +43,6 @@ interface AllCategoriesData {
         }>;
     };
 }
-
-// GraphQL Definitions
-const GET_LOGO_DATA = gql`
-  query GetLogoData {
-    siteLogo { sourceUrl }
-    logoWidth
-    logoHeight
-    displaySiteTitle 
-    generalSettings { title }
-  }
-`;
-
-const GET_USER_SETTINGS = gql`
-  query GetUserSettings($id: ID!) {
-    user(id: $id, idType: DATABASE_ID) {
-        id
-        databaseId
-      name
-      avatarUrl
-      description
-    userSettingsGroup {
-        userSettings
-      }
-    }
-  }
-`;
-
-const UPDATE_LOGO_SETTINGS = gql`
-  mutation UpdateLogoSettings($width: Int, $height: Int, $displayTitle: Boolean) {
-    updateLogoSettings(input: { width: $width, height: $height, displayTitle: $displayTitle }) {
-      success
-    }
-  }
-`;
-
-const UPDATE_USER_PROFILE = gql`
-  mutation UpdateUserProfile($userId: Int!, $displayName: String, $mediaId: Int) {
-    updateUserProfile(input: { userId: $userId, displayName: $displayName, mediaId: $mediaId }) {
-      success
-    }
-  }
-`;
-
-const GET_ALL_CATEGORIES = gql`
-  query GetAllCategories {
-    categories(first: 100) {
-      nodes {
-        name
-        slug
-      }
-    }
-  }
-`;
 
 const handleLogout = async () => {
     try {

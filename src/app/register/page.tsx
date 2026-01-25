@@ -65,7 +65,7 @@ export default function RegisterPage() {
         
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-            Vantura<span className="text-[#FFA500]">log</span>
+            <span className="text-[#FFA500]">Register New User</span>
           </h1>
           <p className="text-gray-500 mt-2">Join the world's travel stories</p>
         </div>

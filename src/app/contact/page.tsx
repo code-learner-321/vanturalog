@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-
+import { GET_CONTACT_PAGE_DATA,SEND_MAIL_MUTATION } from '../../graphql/mutations';
 interface ContactFormData {
   name: string;
   email: string;
@@ -37,24 +37,6 @@ export default function Contact() {
   useEffect(() => {
     const fetchData = async () => {
       const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
-      
-      // --- UPDATED: Combined Query ---
-      const GET_CONTACT_PAGE_DATA = `
-        query GetContactPageData {
-          contactTopContents(first: 1) {
-            nodes {
-              title
-              content
-            }
-          }
-          contactMeSidebars(where: { orderby: { field: DATE, order: ASC } }) {
-            nodes {
-              title
-              content
-            }
-          }
-        }
-      `;
 
       try {
         const res = await fetch(wpUrl!, {
@@ -92,13 +74,7 @@ export default function Contact() {
     e.preventDefault();
     setStatus('loading');
 
-    const SEND_MAIL_MUTATION = `
-      mutation SendEmail($name: String!, $email: String!, $subject: String!, $message: String!) {
-        sendEmail(input: {name: $name, email: $email, subject: $subject, message: $message}) {
-          success
-        }
-      }
-    `;
+    
 
     try {
       const response = await fetch(wpUrl!, {

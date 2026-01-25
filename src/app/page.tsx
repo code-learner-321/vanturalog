@@ -6,52 +6,7 @@ import { useQuery } from "@apollo/client/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-// --- QUERIES ---
-const GET_POSTS = gql`
-  query get_posts($categoryName: String) {
-    posts(where: { categoryName: $categoryName }, first: 100) {
-      nodes {
-        id
-        title
-        uri
-        excerpt
-        content 
-        categories {
-          nodes {
-            name
-          }
-        }
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-        author {
-          node {
-            name
-            description
-            avatar(size: 512) {
-              url
-            }
-            slug
-          }
-        }
-      }
-    }
-  }
-`;
-
-const GET_ADMIN_SETTINGS = gql`
-  query GetAdminSettings {
-    user(id: "1", idType: DATABASE_ID) {
-      userSettingsGroup {
-        userSettings
-      }
-    }
-  }
-`;
+import { GET_POSTS,GET_ADMIN_SETTINGS } from "@/graphql/mutations";
 
 // --- TYPES ---
 interface PostsData {

@@ -1,4 +1,4 @@
-import React from 'react'
+import {GET_ABOUT_DATA} from '../../graphql/mutations';
 
 // 1. Define the Types for TypeScript
 interface AuthorNode {
@@ -15,22 +15,7 @@ interface AboutData {
   };
 }
 
-const GET_ABOUT_DATA = `
-  query GetAboutPageData {
-    mainAuthors {
-      nodes {
-        title
-        content
-      }
-    }
-    sidebarAuthors(where: { orderby: { field: DATE, order: ASC } }) {
-      nodes {
-        title
-        content
-      }
-    }
-  }
-`;
+
 
 async function getAboutData(): Promise<AboutData | null> {
   const wpUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_URL;
@@ -83,7 +68,6 @@ export default async function about() {
           )}
         </div>
 
-        {/* Sidebar Area */}
         {/* Sidebar Area */}
         <aside className="sm:col-span-4 space-y-8 sm:space-y-10 order-2">
           {sidebarAuthors.length > 0 ? (

@@ -81,17 +81,17 @@ export default function Header() {
     }, []);
 
     const handleNavClick = (e: React.MouseEvent, path: string) => {
-    e.preventDefault();
-    if (pathname === path) return;
+        e.preventDefault();
+        if (pathname === path) return;
 
-    setActiveRedirect(path);
-    router.push(path);
+        setActiveRedirect(path);
+        router.push(path);
 
-    // Safety reset: if the page hasn't changed in 5 seconds, clear the spinner
-    setTimeout(() => {
-        setActiveRedirect(null);
-    }, 5000);
-};
+        // Safety reset: if the page hasn't changed in 5 seconds, clear the spinner
+        setTimeout(() => {
+            setActiveRedirect(null);
+        }, 5000);
+    };
 
     const navLinks = [
         { name: 'Home', href: '/' },
@@ -101,7 +101,7 @@ export default function Header() {
 
     const logoUrl = data?.siteLogo?.sourceUrl;
     const customWidth = data?.logoWidth || 32;
-    const dynamicTitle = data?.generalSettings?.title || "Vantura";
+    const dynamicTitle = data?.generalSettings?.title || "Site Logo";
     const showTitle = data?.displaySiteTitle !== false;
 
     return (
@@ -109,16 +109,15 @@ export default function Header() {
             <div className="flex h-full flex-col">
                 <div className="px-4 md:px-10 lg:px-20 xl:px-40 flex justify-center py-3">
                     <div className="w-full flex items-center justify-between max-w-[1280px]">
-
+            
                         {/* Logo & Site Title */}
-                        <Link href="/" className="flex items-center gap-4 cursor-pointer group">
+                        <Link href="/" className="flex items-center gap-4 cursor-pointer">
                             <div className="text-[#FFA500] transition-transform group-hover:scale-110 flex items-center justify-center">
                                 {logoUrl ? (
                                     <img src={logoUrl} alt={data?.siteLogo?.altText || "Logo"} style={{ width: `${customWidth}px`, height: 'auto' }} className="object-contain" />
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="4 17 10 11 4 5"></polyline>
-                                        <line x1="12" y1="19" x2="20" y2="19"></line>
+                                        <path d="m9 18 6-6-6-6" />
                                     </svg>
                                 )}
                             </div>
@@ -176,7 +175,7 @@ export default function Header() {
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Mobile Menu Content - Added handleNavClick here too */}
                 <div className={`md:hidden overflow-hidden transition-all duration-300 bg-white border-t border-gray-100 ${isOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <nav className="flex flex-col p-6 gap-5">
