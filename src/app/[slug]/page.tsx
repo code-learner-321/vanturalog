@@ -7,6 +7,14 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { GET_SINGLE_POST, CREATE_COMMENT } from "@/graphql/mutations";
 
+interface CreateCommentResponse {
+  createComment: {
+    comment: {
+      status: string;
+    };
+  };
+}
+
 export default function SinglePost() {
   const params = useParams();
   const slugParam = Array.isArray(params.slug) ? params.slug[0] : params.slug;
@@ -76,20 +84,21 @@ export default function SinglePost() {
     return () => clearInterval(pollInterval);
   }, [slug, refetch]);
 
-  const [createComment, { loading: submitting }] = useMutation(CREATE_COMMENT, {
-    onCompleted: (data) => {
-      const status = data?.createComment?.comment?.status;
-      if (status?.toUpperCase() !== 'APPROVE') {
-        setStatusMsg("✓ Comment submitted! Awaiting moderation.");
-      } else {
-        setStatusMsg("✓ Comment posted successfully!");
-      }
-      setFormData(prev => ({ ...prev, content: "" }));
-      setTimeout(() => setStatusMsg(""), 10000);
-      refetch();
-    },
-    onError: (err) => setStatusMsg(`Error: ${err.message}`)
-  });
+const [createComment, { loading: submitting }] = useMutation<CreateCommentResponse>(CREATE_COMMENT, {
+  onCompleted: (data) => {
+    // Now TypeScript knows that data.createComment exists!
+    const status = data?.createComment?.comment?.status;
+    if (status?.toUpperCase() !== 'APPROVE') {
+      setStatusMsg("✓ Comment submitted! Awaiting moderation.");
+    } else {
+      setStatusMsg("✓ Comment posted successfully!");
+    }
+    setFormData(prev => ({ ...prev, content: "" }));
+    setTimeout(() => setStatusMsg(""), 10000);
+    refetch();
+  },
+  onError: (err) => setStatusMsg(`Error: ${err.message}`)
+});
 
   const post = data?.postBy;
   const wpGlobalStyles = data?.globalStyles?.css;

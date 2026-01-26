@@ -29,7 +29,7 @@ interface UserSettingsData {
         avatarUrl: string;
         description: string;
         userSettingsGroup?: {
-            homepageCategorySlug: string; // Ensure this matches your GQL field name
+            userSettings: string; // Ensure this matches your GQL field name
             postsPerPage: string | number; // Ensure this matches your GQL field name
         };
     };
@@ -231,30 +231,27 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
     const [postsPerPage, setPostsPerPage] = useState<number>(6);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-    const { data: freshData, loading: userLoading, refetch } = useQuery(GET_USER_SETTINGS, {
+    const { data: freshData, loading: userLoading, refetch } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
         variables: { id: userData?.databaseId?.toString() },
         fetchPolicy: 'network-only', 
         skip: !userData?.databaseId,
     });
     
-    const { data: catData } = useQuery(GET_ALL_CATEGORIES);
+    const { data: catData } = useQuery<AllCategoriesData>(GET_ALL_CATEGORIES);
 
     useEffect(() => {
-        // This log will now show the object with 'userSettings'
-        console.log("DEBUG GQL DATA:", freshData?.user?.userSettingsGroup);
+    if (freshData?.user?.userSettingsGroup) {
+        const group = freshData.user.userSettingsGroup;
+        
+        // This MUST match the 'userSettings' key from your GQL query
+        const slug = group.userSettings || ''; 
+        const count = group.postsPerPage ? parseInt(group.postsPerPage.toString()) : 6;
 
-        if (freshData?.user?.userSettingsGroup) {
-            const group = freshData.user.userSettingsGroup;
-            
-            // FIX: Map using the keys confirmed in your IDE
-            const slug = group.userSettings || ''; 
-            const count = group.postsPerPage ? parseInt(group.postsPerPage.toString()) : 6;
-
-            setSelectedCategory(slug);
-            setPostsPerPage(count);
-            setIsDataLoaded(true);
-        }
-    }, [freshData]);
+        setSelectedCategory(slug);
+        setPostsPerPage(count);
+        setIsDataLoaded(true);
+    }
+}, [freshData]);
 
     const handleSave = async () => {
     setStatus('saving');
@@ -311,15 +308,17 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
                         <label className="text-[10px] uppercase font-black text-slate-400 ml-2 mb-1 block">Featured Category</label>
                         <div className="p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 focus-within:border-orange-200 transition-all">
                             <select 
-                                value={selectedCategory} 
-                                onChange={(e) => setSelectedCategory(e.target.value)} 
-                                className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
-                            >
-                                <option value="">Select Category</option>
-                                {catData?.categories?.nodes.map((cat: any) => (
-                                    <option key={cat.slug} value={cat.slug}>{cat.name}</option>
-                                ))}
-                            </select>
+    value={selectedCategory} 
+    onChange={(e) => setSelectedCategory(e.target.value)} 
+    className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
+>
+    <option value="">Select Category</option>
+    {catData?.categories?.nodes.map((cat: any) => (
+        <option key={cat.slug} value={cat.slug}>
+            {cat.name}
+        </option>
+    ))}
+</select>
                         </div>
                     </div>
 
