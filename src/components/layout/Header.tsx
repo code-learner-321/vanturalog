@@ -125,47 +125,67 @@ export default function Header() {
                         </Link>
 
                         {/* Desktop Navigation */}
-                        <div className="hidden md:flex flex-1 justify-end gap-8 items-center">
-                            <nav className="flex items-center gap-8">
-                                {navLinks.map((link) => (
-                                    <Link key={link.name} href={link.href} className="text-sm font-medium transition-colors hover:text-[#FFA500] text-slate-600 relative group">
-                                        {link.name}
-                                        <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#FFA500] transition-all group-hover:w-full"></span>
-                                    </Link>
-                                ))}
+<div className="hidden md:flex flex-1 justify-end gap-8 items-center">
+    <nav className="flex items-center gap-8">
+        {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            
+            return (
+                <button 
+                    key={link.name} 
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    disabled={!!activeRedirect}
+                    className={`text-sm font-medium transition-colors relative group flex items-center gap-2 cursor-pointer disabled:opacity-70 ${
+                        isActive ? 'text-[#FFA500]' : 'text-slate-600 hover:text-[#FFA500]'
+                    }`}
+                >
+                    {/* Spinner shows next to text if this specific link is loading */}
+                    {activeRedirect === link.href && (
+                        <LoadingSpinner color="text-[#FFA500]" />
+                    )}
+                    
+                    {link.name}
+                    
+                    {/* Underline effect: Now only visible on hover, removed from active state */}
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#FFA500] transition-all group-hover:w-full"></span>
+                </button>
+            );
+        })}
 
-                                <div className="flex items-center gap-3 border-l border-gray-300 pl-8">
-                                    {userInitial ? (
-                                        <button
-                                            onClick={(e) => handleNavClick(e, "/admin/dashboard")}
-                                            disabled={!!activeRedirect}
-                                            className={`size-9 rounded-full bg-[#FFA500] text-white flex items-center justify-center text-sm font-bold shadow-md hover:brightness-110 transition-all cursor-pointer ring-2 ring-white relative ${activeRedirect === "/admin/dashboard" ? "opacity-80 cursor-wait" : ""}`}
-                                        >
-                                            {activeRedirect === "/admin/dashboard" ? <LoadingSpinner /> : userInitial}
-                                        </button>
-                                    ) : (
-                                        <>
-                                            <button
-                                                onClick={(e) => handleNavClick(e, "/login")}
-                                                disabled={!!activeRedirect}
-                                                className="text-sm font-semibold text-slate-700 hover:text-[#FFA500] transition-colors cursor-pointer flex items-center gap-2"
-                                            >
-                                                {activeRedirect === "/login" && <LoadingSpinner color="text-[#FFA500]" />}
-                                                Log in
-                                            </button>
+        <div className="flex items-center gap-3 border-l border-gray-300 pl-8">
+            {userInitial ? (
+                <button
+                    onClick={(e) => handleNavClick(e, "/admin/dashboard")}
+                    disabled={!!activeRedirect}
+                    className={`size-9 rounded-full bg-[#FFA500] text-white flex items-center justify-center text-sm font-bold shadow-md hover:brightness-110 transition-all cursor-pointer ring-2 ring-white relative ${activeRedirect === "/admin/dashboard" ? "opacity-80 cursor-wait" : ""}`}
+                >
+                    {activeRedirect === "/admin/dashboard" ? <LoadingSpinner /> : userInitial}
+                </button>
+            ) : (
+                <>
+                    <button
+                        onClick={(e) => handleNavClick(e, "/login")}
+                        disabled={!!activeRedirect}
+                        className={`text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50 ${
+                            pathname === "/login" ? "text-[#FFA500]" : "text-slate-700 hover:text-[#FFA500]"
+                        }`}
+                    >
+                        {activeRedirect === "/login" && <LoadingSpinner color="text-[#FFA500]" />}
+                        Log in
+                    </button>
 
-                                            <button
-                                                onClick={(e) => handleNavClick(e, "/register")}
-                                                disabled={!!activeRedirect}
-                                                className="text-sm font-semibold bg-[#FFA500] text-white px-6 py-2.5 rounded-full hover:shadow-lg transition-all cursor-pointer flex items-center justify-center min-w-[110px]"
-                                            >
-                                                {activeRedirect === "/register" ? <LoadingSpinner /> : "Register"}
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </nav>
-                        </div>
+                    <button
+                        onClick={(e) => handleNavClick(e, "/register")}
+                        disabled={!!activeRedirect}
+                        className="text-sm font-semibold bg-[#FFA500] text-white px-6 py-2.5 rounded-full hover:shadow-lg transition-all cursor-pointer flex items-center justify-center min-w-[110px] disabled:opacity-70"
+                    >
+                        {activeRedirect === "/register" ? <LoadingSpinner /> : "Register"}
+                    </button>
+                </>
+            )}
+        </div>
+    </nav>
+</div>
 
                         {/* Mobile Menu Toggle */}
                         <div className="md:hidden flex items-center gap-3">

@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -44,6 +43,7 @@ interface SettingsData {
   user: {
     userSettingsGroup: {
       userSettings: string;
+      postsPerPage: number;
     };
   };
 }
@@ -56,11 +56,13 @@ function HomeContent() {
   const currentPage = pageParam ? parseInt(pageParam) : 1;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const postsPerPage = 6;
+  // const postsPerPage = 6;
 
   // 1. Fetch settings first
   const { data: settingsData, loading: settingsLoading } = useQuery<SettingsData>(GET_ADMIN_SETTINGS);
   const activeCategory = settingsData?.user?.userSettingsGroup?.userSettings || "india-tour";
+
+  const postsPerPage = Number(settingsData?.user?.userSettingsGroup?.postsPerPage) || 6;
 
   // 2. Fetch posts (skipped until settings are available)
   const { loading: postsLoading, error, data } = useQuery<PostsData>(GET_POSTS, {
@@ -174,7 +176,7 @@ function HomeContent() {
                       setSearchQuery(e.target.value);
                       if (currentPage !== 1) router.push(`?page=1`, { scroll: false });
                     }}
-                    className="flex w-full h-9 min-w-0 flex-1 text-slate-900 focus:outline-0 bg-transparent px-4 text-base border-none focus:ring-0"
+                    className="flex w-full h-9 min-w-0 flex-1 bg-transparent px-4 text-base border-none"
                     placeholder="Search articles..."
                   />
                 </div>

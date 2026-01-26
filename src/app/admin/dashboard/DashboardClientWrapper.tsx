@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
-import { GET_LOGO_DATA,GET_USER_SETTINGS,UPDATE_LOGO_SETTINGS,UPDATE_USER_PROFILE,GET_ALL_CATEGORIES } from '@/graphql/queries';
+import { GET_LOGO_DATA, GET_USER_SETTINGS, UPDATE_LOGO_SETTINGS, UPDATE_USER_PROFILE, GET_ALL_CATEGORIES } from '@/graphql/queries';
 
 // --- TYPES ---
 interface LogoData {
@@ -29,8 +29,8 @@ interface UserSettingsData {
         avatarUrl: string;
         description: string;
         userSettingsGroup?: {
-            userSettings: string;
-            homepage_category_slug?: string;
+            userSettings: string; // This maps to homepage_category_slug in your GQL
+            postsPerPage?: string | number; // This maps to posts_per_page in your GQL
         };
     };
 }
@@ -118,13 +118,13 @@ function LogoSettingsManager() {
             </div>
             {status && <div className={`p-4 rounded-xl text-xs font-bold text-center ${status.includes('❌') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{status}</div>}
             <button onClick={handleSave} className="w-full cursor-pointer bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-orange-700 active:scale-95 transition-all">
-                Save Branding Settings
+                Save Settings
             </button>
         </div>
     );
 }
 
-// --- USER SETTINGS MANAGER ---
+// --- USER PROFILE MANAGER ---
 function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
     const router = useRouter();
     const [isHydrated, setIsHydrated] = useState(false);
@@ -224,57 +224,125 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
     );
 }
 
+// --- CATEGORY & PAGINATION MANAGER ---
 function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
     const router = useRouter();
     const [status, setStatus] = useState<'idle' | 'saving' | 'success'>('idle');
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [postsPerPage, setPostsPerPage] = useState<number>(6);
+
     const { data: freshData, loading: userLoading, refetch } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
         variables: { id: userData?.databaseId?.toString() },
         fetchPolicy: 'network-only',
         skip: !userData?.databaseId
     });
+    
     const { data: catData, loading: catsLoading } = useQuery<AllCategoriesData>(GET_ALL_CATEGORIES);
 
     useEffect(() => {
-        const savedValue = freshData?.user?.userSettingsGroup?.userSettings;
-        if (savedValue) setSelectedCategory(savedValue);
+        if (freshData?.user?.userSettingsGroup) {
+            const group = freshData.user.userSettingsGroup;
+            // Note: matching the property name used in your UserSettingsData interface
+            if (group.userSettings) setSelectedCategory(group.userSettings);
+            if (group.postsPerPage) setPostsPerPage(Number(group.postsPerPage));
+        }
     }, [freshData]);
 
     const handleSave = async () => {
         setStatus('saving');
+        
+        // FIX: Based on your error message, WP requires this as a string
+        const payload = {
+            acf: {
+                homepage_category_slug: selectedCategory || "",
+                posts_per_page: postsPerPage.toString() // Change number to string here
+            }
+        };
+
         try {
             const response = await fetch(`https://vanturalog.najubudeen.info/wp-json/wp/v2/users/${userData.databaseId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-                body: JSON.stringify({ acf: { homepage_category_slug: selectedCategory } })
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${jwtToken}` 
+                },
+                body: JSON.stringify(payload)
             });
+
             if (response.ok) {
                 setStatus('success');
                 await refetch();
                 router.refresh();
                 setTimeout(() => setStatus('idle'), 3000);
+            } else {
+                const errorData = await response.json();
+                console.error("WP Error:", errorData);
+                setStatus('idle');
             }
-        } catch (err) { setStatus('idle'); }
+        } catch (err) { 
+            console.error("Network Fetch error:", err);
+            setStatus('idle'); 
+        }
     };
 
-    if (userLoading || catsLoading) return <div className="p-8 text-orange-600 animate-pulse text-center font-bold">Loading...</div>;
+    if (userLoading || catsLoading) return <div className="p-8 text-orange-600 animate-pulse text-center font-bold uppercase tracking-widest text-xs">Loading Settings...</div>;
 
     return (
         <div className="space-y-6 max-w-md">
-            <div className="p-6 bg-white border rounded-2xl shadow-sm">
-                <h2 className="text-lg font-black text-slate-900 mb-1">Homepage Category</h2>
-                <div className="space-y-4">
-                    <div className="p-4 border-2 border-gray-100 rounded-2xl bg-slate-50">
-                        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-transparent font-bold text-slate-800 outline-none">
-                            <option value="">Select a Category to Show</option>
-                            {catData?.categories?.nodes.map((cat: any) => (
-                                <option key={cat.slug} value={cat.slug}>{cat.name}</option>
-                            ))}
-                        </select>
+            <div className="p-6 bg-white border rounded-[2rem] shadow-sm border-slate-100">
+                <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1.5 h-5 bg-orange-600 rounded-full" />
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Display Settings</h2>
+                </div>
+
+                <div className="space-y-5">
+                    <div>
+                        <label className="text-[10px] uppercase font-black text-slate-400 ml-2 mb-1 block">Featured Category</label>
+                        <div className="p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 focus-within:border-orange-200 transition-all">
+                            <select 
+                                value={selectedCategory} 
+                                onChange={(e) => setSelectedCategory(e.target.value)} 
+                                className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
+                            >
+                                <option value="">Select Category</option>
+                                {catData?.categories?.nodes.map((cat: any) => (
+                                    <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
-                    <button onClick={handleSave} disabled={status === 'saving'} className="w-full py-4 rounded-2xl font-black bg-orange-600 text-white">
-                        {status === 'saving' ? 'Saving...' : 'Save Category'}
+
+                    <div>
+                        <label className="text-[10px] uppercase font-black text-slate-400 ml-2 mb-1 block">Posts Per Page</label>
+                        <div className="p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 focus-within:border-orange-200 transition-all">
+                            <input 
+                                type="number" 
+                                min="1" 
+                                max="30"
+                                value={postsPerPage} 
+                                onChange={(e) => setPostsPerPage(Number(e.target.value))}
+                                className="w-full bg-transparent font-bold text-slate-800 outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleSave} 
+                        disabled={status === 'saving'} 
+                        className={`w-full py-4 rounded-2xl font-black transition-all transform active:scale-95 shadow-lg ${
+                            status === 'success' 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-100'
+                        }`}
+                    >
+                        {status === 'saving' ? 'Processing...' : status === 'success' ? '✓ Changes Saved' : 'Save Settings'}
                     </button>
+                    
+                    {status === 'success' && (
+                        <p className="text-center text-[10px] font-bold text-green-600 animate-fade-in">
+                            Settings synchronized with WordPress
+                        </p>
+                    )}
                 </div>
             </div>
         </div>
@@ -295,25 +363,19 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
         <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black overflow-hidden h-screen">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
-            {/* MOBILE OVERLAY */}
             {isMobileMenuOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden" 
-                    onClick={() => setIsMobileMenuOpen(false)}
-                />
+                <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
             )}
 
-            {/* SIDEBAR */}
             <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-full flex flex-col p-6 border-r border-slate-100">
                     <div className="flex items-center justify-between mb-10">
                         <div className="flex items-center gap-3 group">
-                            <div className="size-9 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg font-black text-xl tracking-tighter">V</div>
+                            
                             <h1 className="text-xl font-black tracking-tighter text-slate-900">
-                                <Link href="/" className="hover:text-orange-600 transition-colors">{headerData?.generalSettings?.title || "Vantura"}</Link>
+                                <Link href="/" className="hover:text-orange-600 text-accent-100 transition-colors">{headerData?.generalSettings?.title || "Vantura"}</Link>
                             </h1>
                         </div>
-                        {/* Close button for mobile */}
                         <button className="md:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}>
                             <span className="material-symbols-outlined">close</span>
                         </button>
@@ -334,7 +396,7 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                         )}
                         {isAdmin && (
                             <button onClick={() => { router.push('?view=categories'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
-                                <span className="material-symbols-outlined text-[20px]">category</span> Category Settings
+                                <span className="material-symbols-outlined text-[20px]">category</span> Layout Settings
                             </button>
                         )}
                     </nav>
@@ -359,10 +421,7 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                 </div>
             </aside>
 
-            {/* CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0">
-                
-                {/* MOBILE TOP BAR (The missing Hamburger) */}
                 <header className="md:hidden flex items-center justify-between bg-white px-6 py-4 border-b">
                     <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-slate-600">
                         <span className="material-symbols-outlined">menu</span>

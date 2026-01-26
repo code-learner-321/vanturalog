@@ -165,6 +165,7 @@ export const GET_ADMIN_SETTINGS = gql`
     user(id: "1", idType: DATABASE_ID) {
       userSettingsGroup {
         userSettings
+        postsPerPage
       }
     }
   }
