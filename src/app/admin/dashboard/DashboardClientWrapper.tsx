@@ -360,13 +360,18 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
     const isAdmin = userData?.role === 'administrator';
 
     // NAVIGATION SPINNER LOGIC
-    const handleViewChange = (view: string) => {
-        setIsNavigating(true);
-        setIsMobileMenuOpen(false);
-        router.push(`?view=${view}`);
-        // Small timeout to allow the layout to switch while showing spinner
-        setTimeout(() => setIsNavigating(false), 500);
-    };
+    // Change this in your DashboardClientWrapper
+const handleViewChange = (view: string) => {
+    if (view === currentView) return; // Don't trigger if already there
+    setIsNavigating(true);
+    setIsMobileMenuOpen(false);
+    router.push(`?view=${view}`);
+};
+
+// Add this useEffect to turn the spinner OFF when the view changes
+useEffect(() => {
+    setIsNavigating(false);
+}, [currentView]); // Runs whenever the URL param 'view' changes
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black overflow-hidden h-screen">
