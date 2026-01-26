@@ -234,7 +234,7 @@ const [createComment, { loading: submitting }] = useMutation<CreateCommentRespon
               }} className="space-y-4">
                 {!isLoggedIn ? (
                   <div className="p-6 rounded-2xl border border-slate-700 bg-slate-800/50 text-center">
-                    <p className="text-slate-400">Join the community to post a comment.</p>
+                    <p className="text-slate-400">Login to post a comment.</p>
                   </div>
                 ) : (
                   <>
