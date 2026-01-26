@@ -13,13 +13,12 @@ export const GET_LOGO_DATA = gql`
 export const GET_USER_SETTINGS = gql`
   query GetUserSettings($id: ID!) {
     user(id: $id, idType: DATABASE_ID) {
-        id
-        databaseId
+      id
+      databaseId
       name
-      avatarUrl
-      description
-    userSettingsGroup {
+      userSettingsGroup {
         userSettings
+        postsPerPage
       }
     }
   }

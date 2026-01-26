@@ -29,8 +29,8 @@ interface UserSettingsData {
         avatarUrl: string;
         description: string;
         userSettingsGroup?: {
-            userSettings: string; // This maps to homepage_category_slug in your GQL
-            postsPerPage?: string | number; // This maps to posts_per_page in your GQL
+            homepageCategorySlug: string; // Ensure this matches your GQL field name
+            postsPerPage: string | number; // Ensure this matches your GQL field name
         };
     };
 }
@@ -226,66 +226,77 @@ function UserSettingsManager({ userData, jwtToken }: { userData: any, jwtToken: 
 
 // --- CATEGORY & PAGINATION MANAGER ---
 function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jwtToken: string }) {
-    const router = useRouter();
     const [status, setStatus] = useState<'idle' | 'saving' | 'success'>('idle');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [postsPerPage, setPostsPerPage] = useState<number>(6);
+    const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-    const { data: freshData, loading: userLoading, refetch } = useQuery<UserSettingsData>(GET_USER_SETTINGS, {
+    const { data: freshData, loading: userLoading, refetch } = useQuery(GET_USER_SETTINGS, {
         variables: { id: userData?.databaseId?.toString() },
-        fetchPolicy: 'network-only',
-        skip: !userData?.databaseId
+        fetchPolicy: 'network-only', 
+        skip: !userData?.databaseId,
     });
     
-    const { data: catData, loading: catsLoading } = useQuery<AllCategoriesData>(GET_ALL_CATEGORIES);
+    const { data: catData } = useQuery(GET_ALL_CATEGORIES);
 
     useEffect(() => {
+        // This log will now show the object with 'userSettings'
+        console.log("DEBUG GQL DATA:", freshData?.user?.userSettingsGroup);
+
         if (freshData?.user?.userSettingsGroup) {
             const group = freshData.user.userSettingsGroup;
-            // Note: matching the property name used in your UserSettingsData interface
-            if (group.userSettings) setSelectedCategory(group.userSettings);
-            if (group.postsPerPage) setPostsPerPage(Number(group.postsPerPage));
+            
+            // FIX: Map using the keys confirmed in your IDE
+            const slug = group.userSettings || ''; 
+            const count = group.postsPerPage ? parseInt(group.postsPerPage.toString()) : 6;
+
+            setSelectedCategory(slug);
+            setPostsPerPage(count);
+            setIsDataLoaded(true);
         }
     }, [freshData]);
 
     const handleSave = async () => {
-        setStatus('saving');
-        
-        // FIX: Based on your error message, WP requires this as a string
-        const payload = {
-            acf: {
-                homepage_category_slug: selectedCategory || "",
-                posts_per_page: postsPerPage.toString() // Change number to string here
-            }
-        };
+    setStatus('saving');
+    try {
+        const response = await fetch(`https://vanturalog.najubudeen.info/wp-json/wp/v2/users/${userData.databaseId}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${jwtToken}` 
+            },
+            body: JSON.stringify({
+                acf: {
+                    // TRY THESE SLUGS (Check ACF Admin to confirm)
+                    homepage_category_slug: selectedCategory, 
+                    posts_per_page: postsPerPage.toString() 
+                }
+            })
+        });
 
-        try {
-            const response = await fetch(`https://vanturalog.najubudeen.info/wp-json/wp/v2/users/${userData.databaseId}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${jwtToken}` 
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                setStatus('success');
-                await refetch();
-                router.refresh();
-                setTimeout(() => setStatus('idle'), 3000);
-            } else {
-                const errorData = await response.json();
-                console.error("WP Error:", errorData);
-                setStatus('idle');
-            }
-        } catch (err) { 
-            console.error("Network Fetch error:", err);
-            setStatus('idle'); 
+        if (response.ok) {
+            setStatus('success');
+            await refetch();
+            setTimeout(() => setStatus('idle'), 3000);
+        } else {
+            const errorData = await response.json();
+            console.error("Save Error Details:", errorData);
+            setStatus('idle');
         }
-    };
+    } catch (err) { 
+        console.error("Fetch Error:", err);
+        setStatus('idle'); 
+    }
+};
 
-    if (userLoading || catsLoading) return <div className="p-8 text-orange-600 animate-pulse text-center font-bold uppercase tracking-widest text-xs">Loading Settings...</div>;
+    // Spinner prevents the "6" and "Select Category" flicker on refresh
+    if (userLoading || (!isDataLoaded && freshData?.user)) {
+        return (
+            <div className="p-12 text-center text-orange-600 font-bold animate-pulse">
+                SYNCING PREFERENCES...
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-md">
@@ -317,8 +328,6 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
                         <div className="p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 focus-within:border-orange-200 transition-all">
                             <input 
                                 type="number" 
-                                min="1" 
-                                max="30"
                                 value={postsPerPage} 
                                 onChange={(e) => setPostsPerPage(Number(e.target.value))}
                                 className="w-full bg-transparent font-bold text-slate-800 outline-none"
@@ -328,36 +337,36 @@ function PostCategorySettingsManager({ userData, jwtToken }: { userData: any, jw
 
                     <button 
                         onClick={handleSave} 
-                        disabled={status === 'saving'} 
-                        className={`w-full py-4 rounded-2xl font-black transition-all transform active:scale-95 shadow-lg ${
-                            status === 'success' 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-100'
+                        className={`w-full py-4 rounded-2xl font-black transition-all ${
+                            status === 'success' ? 'bg-green-500 text-white' : 'bg-orange-600 text-white'
                         }`}
                     >
-                        {status === 'saving' ? 'Processing...' : status === 'success' ? '✓ Changes Saved' : 'Save Settings'}
+                        {status === 'saving' ? 'Saving...' : status === 'success' ? '✓ Saved' : 'Save Settings'}
                     </button>
-                    
-                    {status === 'success' && (
-                        <p className="text-center text-[10px] font-bold text-green-600 animate-fade-in">
-                            Settings synchronized with WordPress
-                        </p>
-                    )}
                 </div>
             </div>
         </div>
     );
 }
-
 // --- MAIN WRAPPER ---
 export default function DashboardClientWrapper({ userData, jwtToken }: { userData: any, jwtToken: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: headerData } = useQuery<LogoData>(GET_LOGO_DATA);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isNavigating, setIsNavigating] = useState(false);
 
     const currentView = searchParams.get('view') || 'dashboard';
     const isAdmin = userData?.role === 'administrator';
+
+    // NAVIGATION SPINNER LOGIC
+    const handleViewChange = (view: string) => {
+        setIsNavigating(true);
+        setIsMobileMenuOpen(false);
+        router.push(`?view=${view}`);
+        // Small timeout to allow the layout to switch while showing spinner
+        setTimeout(() => setIsNavigating(false), 500);
+    };
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row text-black overflow-hidden h-screen">
@@ -371,7 +380,6 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                 <div className="h-full flex flex-col p-6 border-r border-slate-100">
                     <div className="flex items-center justify-between mb-10">
                         <div className="flex items-center gap-3 group">
-                            
                             <h1 className="text-xl font-black tracking-tighter text-slate-900">
                                 <Link href="/" className="hover:text-orange-600 text-accent-100 transition-colors">{headerData?.generalSettings?.title || "Vantura"}</Link>
                             </h1>
@@ -383,19 +391,19 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
 
                     <nav className="space-y-1.5 flex-1">
                         <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Main Menu</p>
-                        <button onClick={() => { router.push('?view=dashboard'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'dashboard' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <button onClick={() => handleViewChange('dashboard')} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'dashboard' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
                             <span className="material-symbols-outlined">dashboard</span> Dashboard
                         </button>
-                        <button onClick={() => { router.push('?view=user_settings'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'user_settings' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <button onClick={() => handleViewChange('user_settings')} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'user_settings' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
                             <span className="material-symbols-outlined">settings</span> Account Settings
                         </button>
                         {isAdmin && (
-                            <button onClick={() => { router.push('?view=logo'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'logo' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+                            <button onClick={() => handleViewChange('logo')} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'logo' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
                                 <span className="material-symbols-outlined">straighten</span> Logo Settings
                             </button>
                         )}
                         {isAdmin && (
-                            <button onClick={() => { router.push('?view=categories'); setIsMobileMenuOpen(false); }} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+                            <button onClick={() => handleViewChange('categories')} className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${currentView === 'categories' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
                                 <span className="material-symbols-outlined text-[20px]">category</span> Layout Settings
                             </button>
                         )}
@@ -432,7 +440,15 @@ export default function DashboardClientWrapper({ userData, jwtToken }: { userDat
                     </div>
                 </header>
 
-                <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+                <main className="flex-1 p-6 md:p-12 overflow-y-auto relative">
+                    {/* DASHBOARD SPINNER */}
+                    {isNavigating && (
+                        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#F8F9FA]/80 backdrop-blur-sm">
+                            <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-600 rounded-full animate-spin"></div>
+                            <p className="mt-4 text-[10px] font-black text-orange-600 uppercase tracking-widest">Updating View...</p>
+                        </div>
+                    )}
+
                     <div className="max-w-4xl mx-auto">
                         {currentView === 'dashboard' && (
                             <div className="animate-fade-in">
