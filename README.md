@@ -1,5 +1,3 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 ## Getting Started
 
 First, run the development server:
@@ -16,9 +14,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# [Project Name] - Headless WordPress with Next.js & GraphQL
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 The Challenge
+Standard WordPress themes often struggle with Core Web Vitals and rigid UI structures. This project required a highly dynamic frontend with sub-second page loads while maintaining the ease of content management for the end-user.
+
+## 🛠️ The Solution (Architectural Overview)
+I decoupled the backend from the frontend to create a secure, scalable architecture:
+- [cite_start]**Backend:** WordPress served as a Headless CMS[cite: 11, 19].
+- [cite_start]**API Layer:** Used **WPGraphQL** to fetch only the specific data needed, reducing payload size[cite: 11, 31].
+- [cite_start]**Frontend:** **Next.js** for Static Site Generation (SSG) and Incremental Static Regeneration (ISR) to ensure lightning-fast performance[cite: 10, 19].
+- [cite_start]**Styling:** **Tailwind CSS** for a utility-first, responsive design[cite: 10, 36].
+
+## 💡 Key Features & Problem Solving
+- **Custom Preview Mode:** Implemented a bridge between Next.js and WordPress so editors can preview drafts.
+- [cite_start]**On-Page SEO:** Integrated Yoast SEO data into the GraphQL schema to automate Meta tags and Schema Markup[cite: 15, 23].
+- [cite_start]**Performance:** Achieved 95+ Mobile PageSpeed scores via image optimization and code splitting.
 
 ## Learn More
 
