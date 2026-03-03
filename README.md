@@ -1,8 +1,10 @@
 ## Getting Started
 
-First, run the development server:
+First download or clone the project from the repository. 
+run the development server:
 
 ```bash
+npm install
 npm run dev
 # or
 yarn dev
